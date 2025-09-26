@@ -11,23 +11,27 @@
 
 #pragma region Constant Variables
 
-	// Coyote time
+	// -- Coyote time -- 
 	const float MaxCoyoteTime = 0.18f;
 
-	// Falling velocity
+	// -- Falling velocity --
+
 	const float MaxFallingZVel = -3600;
+
+	// Wall falling clamps
 	const float MaxWallZVel = -400.f;
-	const float MaxWallYVel = 60.f;// Horizontal wall movement
+	const float MaxWallXYVel = 60.f;
+
 	const float MaxGlideZVel = -170.f;
 
-	// Wall jump
+	// -- Wall jump --
 	const float WallJumpTraceDistance = 50.0f;
 	const float WallJumpTraceRadius = 7.0f;
 	const int WallJumpAdjacentImpulse = 800;
 	const int WallJumpVerticalImpulse = 900;
 	const float DelayBetweenWallJumps = 0.4f;
 
-	// Ground pound
+	// -- Ground pound --
 	const int GroundPoundImpulse = 1800;
 	const float GroundPoundInputBuffer = .15f;
 
@@ -420,8 +424,8 @@ AChimeCharacter::AChimeCharacter()
 		else if (bIsOnWall)
 		{
 			// Clamp wall slide vel
-			Vel.X = FMath::Clamp(Vel.X, -MaxWallYVel, MaxWallYVel);
-			Vel.Y = FMath::Clamp(Vel.Y, -MaxWallYVel, MaxWallYVel);
+			Vel.X = FMath::Clamp(Vel.X, -MaxWallXYVel, MaxWallXYVel);
+			Vel.Y = FMath::Clamp(Vel.Y, -MaxWallXYVel, MaxWallXYVel);
 
 			if (Vel.Z < MaxWallZVel)
 			{
