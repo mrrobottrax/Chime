@@ -9,33 +9,49 @@
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
 
-#pragma region Constant Variables
+#pragma region Movement Constants
 
-	// -- Coyote time -- 
-	const float MaxCoyoteTime = 0.18f;
+// -- Walking / Ground Movement --
+const float MaxWalkSpeed = 640.0f;
+const float BreakingDecelerationWalking = 4000.0f;
+const float MaxAcceleration = 1000.0f;
+const float BrakingFrictionFactor = 1.0f;
+const float GroundFriction = 10.0f;
+const float AirControl = 1.0f;
 
-	// -- Falling velocity --
+// -- Jumping --
+const float DefaultJumpZVelocity = 900.0f;
+//const float DoubleJumpZVelocity = 700.0f;
+const float JumpMaxHoldTime = 0.25f;
 
-	const float MaxFallingZVel = -3600;
+// Coyote Time
+const float MaxCoyoteTime = 0.18f;
 
-	// Wall falling clamps
-	const float MaxWallZVel = -400.f;
-	const float MaxWallXYVel = 60.f;
+// -- Wall Jump --
+const float WallJumpTraceDistance = 50.0f;
+const float WallJumpTraceRadius = 7.0f;
+const int WallJumpAdjacentImpulse = 800;
+const int WallJumpVerticalImpulse = 900;
+const float DelayBetweenWallJumps = 0.4f;
 
-	const float MaxGlideZVel = -170.f;
+// -- Falling / Gravity --
+const float DefaultGravityScale = 2.5f;
+const float MaxFallingZVel = -3600.0f;
+const float FallingLateralFriction = 0.1f;
 
-	// -- Wall jump --
-	const float WallJumpTraceDistance = 50.0f;
-	const float WallJumpTraceRadius = 7.0f;
-	const int WallJumpAdjacentImpulse = 800;
-	const int WallJumpVerticalImpulse = 900;
-	const float DelayBetweenWallJumps = 0.4f;
+// Wall falling clamps
+const float MaxWallZVel = -400.0f;
+const float MaxWallXYVel = 60.0f;
 
-	// -- Ground pound --
-	const int GroundPoundImpulse = 1800;
-	const float GroundPoundInputBuffer = .15f;
+// Glide
+const float MaxGlideZVel = -170.0f;
+
+// -- Ground Pound --
+const int GroundPoundImpulse = 1800;
+const float GroundPoundInputBuffer = 0.15f;
 
 #pragma endregion
+
 
 AChimeCharacter::AChimeCharacter()
 {
@@ -56,17 +72,31 @@ AChimeCharacter::AChimeCharacter()
 	bUseControllerRotationRoll = false;
 
 	// Configure character movement
-	GetCharacterMovement()->bOrientRotationToMovement = true;
-	GetCharacterMovement()->RotationRate = FRotator(0.0f, 500.0f, 0.0f);
+	UCharacterMovementComponent* MoveComp = GetCharacterMovement();
+	MoveComp->bOrientRotationToMovement = true;
+	MoveComp->RotationRate = FRotator(0.0f, 500.0f, 0.0f);
 
-	// Set default gravity
-	GetCharacterMovement()->GravityScale = 2.5f;
+	// Movement constants
+	MoveComp->MaxWalkSpeed = MaxWalkSpeed;
+	MoveComp->BrakingDecelerationWalking = BreakingDecelerationWalking;
+	MoveComp->MaxAcceleration = MaxAcceleration;
+	MoveComp->BrakingFrictionFactor = BrakingFrictionFactor;
+	MoveComp->GroundFriction = GroundFriction;
+	MoveComp->AirControl = AirControl;
 
-	// enable press and hold jump
-	JumpMaxHoldTime = 0.25f;
+	// Jumping
+	JumpMaxHoldTime = JumpMaxHoldTime;
+	MoveComp->JumpZVelocity = DefaultJumpZVelocity;
 
-	// Unreal  assumes you made a jump when you enter the falling state
-	// This is a hacky fix that Unreal recomends officially :D
+	// Gravity / Falling
+	MoveComp->GravityScale = DefaultGravityScale;
+	MoveComp->FallingLateralFriction = FallingLateralFriction;
+
+	// Misc
+	MoveComp->bUseFlatBaseForFloorChecks = true;
+
+	// Unreal assumes you made a jump when you enter the falling state.
+	// This is a hacky fix that Unreal recomends officially! :D
 	JumpMaxCount = 3;
 }
 
@@ -235,8 +265,6 @@ AChimeCharacter::AChimeCharacter()
 	{
 		// Poke input goes here
 
-		UE_LOG(LogTemp, Warning, TEXT("Can Unreal... NOT FUCKING ROLL BACK PLEASE?!?!?!"));
-
 		/*
 		if (bIsMovementRestricted || bIsOnWall)
 			return;
@@ -297,6 +325,8 @@ AChimeCharacter::AChimeCharacter()
 						DelayBetweenWallJumps,
 						false
 					);
+
+					UE_LOG(LogTemp, Warning, TEXT("Wall Jump"));
 				}
 				else
 				{
@@ -318,6 +348,8 @@ AChimeCharacter::AChimeCharacter()
 			{
 				// Ground jump
 				Jump();
+
+				UE_LOG(LogTemp, Warning, TEXT("Jump"));
 			}
 		}
 	}
@@ -329,16 +361,20 @@ AChimeCharacter::AChimeCharacter()
 
 	void AChimeCharacter::TryGlide()
 	{
-		if (GetCharacterMovement()->IsFalling() && !bIsGliding &&
-			bHasDoubleJumped && !bIsGroundPounding)
+		if (GetCharacterMovement()->IsFalling() && bHasDoubleJumped && 
+			!bIsGliding && !bIsGroundPounding && !bIsOnWall)
 		{
 			bIsGliding = true;
+
+			UE_LOG(LogTemp, Warning, TEXT("Start glide"));
 		}
 	}
 
 	void AChimeCharacter::EndGlide()
 	{
 		bIsGliding = false;
+
+		UE_LOG(LogTemp, Warning, TEXT("End glide"));
 	}
 
 	void AChimeCharacter::DoGroundPound() 
@@ -350,6 +386,8 @@ AChimeCharacter::AChimeCharacter()
 		// Pause movement and get downwards impulse
 		const FVector PoundImpulse = FVector::DownVector * GroundPoundImpulse;
 		PauseMovement(GroundPoundInputBuffer, PoundImpulse);
+
+		UE_LOG(LogTemp, Warning, TEXT("Ground pound"));
 	}
 
 #pragma endregion
@@ -448,6 +486,7 @@ AChimeCharacter::AChimeCharacter()
 		GetCharacterMovement()->StopMovementImmediately();
 
 		bIsGliding = false;
+		UE_LOG(LogTemp, Warning, TEXT("Enter wall slide"));
 
 		// To Do
 		// Particles, Animations, and sound go here
