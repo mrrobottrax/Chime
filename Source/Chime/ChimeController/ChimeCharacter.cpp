@@ -29,7 +29,7 @@ const float MaxCoyoteTime = 0.18f;
 
 // -- Wall Jump --
 const float WallJumpTraceDistance = 50.0f;
-const float WallJumpTraceRadius = 7.0f;
+const float WallJumpTraceRadius = 10.0f;
 const int WallJumpAdjacentImpulse = 800;
 const int WallJumpVerticalImpulse = 900;
 const float DelayBetweenWallJumps = 0.4f;
@@ -279,7 +279,7 @@ AChimeCharacter::AChimeCharacter()
 		Super::Tick(DeltaTime);
 
 		bool bPrevOnWall = bIsOnWall;
-		bIsOnWall = CheckForWall();
+		bIsOnWall = CheckForWall(false);
 
 		// Kill all velocity if wall was just mounted
 		if (!bPrevOnWall && bIsOnWall)
@@ -302,7 +302,7 @@ AChimeCharacter::AChimeCharacter()
 			if (GetCharacterMovement()->IsFalling())
 			{
 				FHitResult Hit;
-				if (CheckForWall(&Hit))
+				if (CheckForWall(true, &Hit))
 				{
 					// Rotate the character to face away from the wall
 					FRotator WallOrientation = Hit.ImpactNormal.ToOrientationRotator();
@@ -418,9 +418,9 @@ AChimeCharacter::AChimeCharacter()
 		bIsInputRestricted = false;
 	}
 
-	bool AChimeCharacter::CheckForWall(FHitResult* outHit)
+	bool AChimeCharacter::CheckForWall(bool isJumpIgnored, FHitResult* outHit)
 	{
-		if (bIsGroundPounding || !GetCharacterMovement()->IsFalling())
+		if (bIsGroundPounding || (!isJumpIgnored && bIsJumpPressed) || !GetCharacterMovement()->IsFalling())
 			return false;
 
 		// Ignore self

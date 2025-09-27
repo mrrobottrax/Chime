@@ -138,7 +138,7 @@ protected:
 protected:
 
 	/** Checks for a wall in the direction the player is moving */
-	virtual bool CheckForWall(FHitResult* result = nullptr);
+	virtual bool CheckForWall(bool isJumpIgnored, FHitResult* result = nullptr);
 
 	/** Clamps the players z velocity based on falling state */
 	virtual void HandleFallingVelocity();
