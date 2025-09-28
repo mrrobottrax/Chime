@@ -39,6 +39,7 @@ protected:
 
 	// Wall jump
 	bool bIsOnWall = false;
+	bool bIsWallJumping = false;// Used to kill double jump after wall jump
 	FTimerHandle WallJumpTimer;
 
 	// Double jump
@@ -126,7 +127,7 @@ protected:
 
 	void StartWallSlide();
 
-	void ResetWallJump();
+	void OnWallJumpEnd();
 
 	void TryGlide();
 
@@ -147,7 +148,7 @@ protected:
 	Once the duration has elapsed, the passed in velocity will be applied.*/
 	void PauseMovement(float duration, FVector resumeVelocity);
 
-	void ResumeMovement();
+	void OnResumeMovement();
 
 protected:
 

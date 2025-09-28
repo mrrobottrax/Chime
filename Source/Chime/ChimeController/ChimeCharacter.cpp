@@ -32,7 +32,7 @@ const float WallJumpTraceDistance = 50.0f;
 const float WallJumpTraceRadius = 10.0f;
 const int WallJumpAdjacentImpulse = 800;
 const int WallJumpVerticalImpulse = 900;
-const float DelayBetweenWallJumps = 0.4f;
+const float WallJumpDelay = 0.4f;
 
 // -- Falling / Gravity --
 const float DefaultGravityScale = 2.5f;
@@ -181,7 +181,7 @@ AChimeCharacter::AChimeCharacter()
 
 	void AChimeCharacter::DoMove(float Right, float Forward)
 	{
-		if (bIsInputRestricted || bIsGroundPounding)
+		if (bIsInputRestricted || bIsWallJumping || bIsGroundPounding)
 			return;
 
 		if (GetController() != nullptr)
@@ -215,13 +215,13 @@ AChimeCharacter::AChimeCharacter()
 	{
 		bIsJumpPressed = true;
 
-		if (bIsInputRestricted || bIsGroundPounding)
+		if (bIsInputRestricted)
 			return;
 
 		// Try glide
 		TryGlide();
 
-		if (bIsGliding)
+		if (bIsGliding || bIsGroundPounding)
 			return;
 
 		// Try normal jump
@@ -317,18 +317,18 @@ AChimeCharacter::AChimeCharacter()
 
 					LaunchCharacter(WallJumpImpulse, true, true);
 
-					bIsInputRestricted = true;
+					bIsWallJumping = true;
 					GetWorld()->GetTimerManager().SetTimer(
 						WallJumpTimer,
 						this,
-						&AChimeCharacter::ResetWallJump,
-						DelayBetweenWallJumps,
+						&AChimeCharacter::OnWallJumpEnd,
+						WallJumpDelay,
 						false
 					);
 
 					UE_LOG(LogTemp, Warning, TEXT("Wall Jump"));
 				}
-				else
+				else if (!bIsWallJumping)
 				{
 					// Check for coyote time
 					if (GetWorld()->GetTimeSeconds() - LastFallTime < MaxCoyoteTime)
@@ -354,16 +354,34 @@ AChimeCharacter::AChimeCharacter()
 		}
 	}
 
-	void AChimeCharacter::ResetWallJump()
+	void AChimeCharacter::StartWallSlide()
 	{
-		bIsInputRestricted = false;
+		GetCharacterMovement()->StopMovementImmediately();
+
+		bIsGliding = false;
+		UE_LOG(LogTemp, Warning, TEXT("Enter wall slide"));
+
+		// To Do
+		// Particles, Animations, and sound go here
+	}
+
+	void AChimeCharacter::OnWallJumpEnd()
+	{
+		bIsWallJumping = false;
 	}
 
 	void AChimeCharacter::TryGlide()
 	{
-		if (GetCharacterMovement()->IsFalling() && bHasDoubleJumped && 
-			!bIsGliding && !bIsGroundPounding && !bIsOnWall)
+		if (GetCharacterMovement()->IsFalling() && (bIsGroundPounding || bHasDoubleJumped) &&
+			!bIsGliding && !bIsOnWall)
 		{
+			// Kill downwards velocity
+			bIsGroundPounding = false;
+			FVector Vel = GetCharacterMovement()->Velocity;
+			Vel.Z = 0;
+			GetCharacterMovement()->Velocity = Vel;
+
+			// Start glide
 			bIsGliding = true;
 
 			UE_LOG(LogTemp, Warning, TEXT("Start glide"));
@@ -403,10 +421,10 @@ AChimeCharacter::AChimeCharacter()
 		StoredResumeVel = resumeVelocity;
 
 		GetCharacterMovement()->DisableMovement();
-		GetWorldTimerManager().SetTimer(PauseTimer, this, &AChimeCharacter::ResumeMovement, duration, false);
+		GetWorldTimerManager().SetTimer(PauseTimer, this, &AChimeCharacter::OnResumeMovement, duration, false);
 	}
 
-	void AChimeCharacter::ResumeMovement()
+	void AChimeCharacter::OnResumeMovement()
 	{
 		GetCharacterMovement()->SetMovementMode(MOVE_Walking);
 
@@ -479,17 +497,6 @@ AChimeCharacter::AChimeCharacter()
 			Vel.Z = MaxGlideZVel;
 			GetCharacterMovement()->Velocity = Vel;
 		}
-	}
-
-	void AChimeCharacter::StartWallSlide() 
-	{
-		GetCharacterMovement()->StopMovementImmediately();
-
-		bIsGliding = false;
-		UE_LOG(LogTemp, Warning, TEXT("Enter wall slide"));
-
-		// To Do
-		// Particles, Animations, and sound go here
 	}
 
 #pragma endregion
