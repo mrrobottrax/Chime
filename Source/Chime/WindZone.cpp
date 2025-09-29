@@ -3,23 +3,29 @@
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Components/PrimitiveComponent.h"
+#include "ChimeController/ChimeCharacter.h"
 
 AWindZone::AWindZone()
 {
-	USceneComponent* SceneComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
-	RootComponent = SceneComponent;
-	WindVolume = CreateDefaultSubobject<UBoxComponent>(TEXT("TestCollision"));
-	WindVolume->SetBoxExtent(FVector(5000.0, 5000.0, 5000.0));
-	WindVolume->SetupAttachment(GetRootComponent());
-	WindVolume->SetGenerateOverlapEvents(true);
-	WindVolume->OnComponentBeginOverlap.AddDynamic(this, &AWindZone::BeginOverlap);
-	WindVolume->OnComponentEndOverlap.AddDynamic(this, &AWindZone::EndOverlap);
+	PrimaryActorTick.bCanEverTick = true;
 
+	USceneComponent* SceneComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
+	WindVolume = CreateDefaultSubobject<UBoxComponent>(TEXT("WindVolume"));
+	WindVolume->SetupAttachment(GetRootComponent());
+	WindVolume->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	WindVolume->SetCollisionObjectType(ECollisionChannel::ECC_WorldDynamic);
+	WindVolume->SetCollisionResponseToAllChannels(ECR_Ignore);
+	WindVolume->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
+	WindVolume->SetCollisionResponseToChannel(ECC_PhysicsBody, ECR_Overlap);
+	WindVolume->SetGenerateOverlapEvents(true);
 }
 
 void AWindZone::BeginPlay()
 {
 	Super::BeginPlay();
+
+	WindVolume->OnComponentBeginOverlap.AddDynamic(this, &AWindZone::BeginOverlap);
+	WindVolume->OnComponentEndOverlap.AddDynamic(this, &AWindZone::EndOverlap);
 }
 
 void AWindZone::Tick(float DeltaTime)
@@ -33,12 +39,22 @@ void AWindZone::Tick(float DeltaTime)
 	{
 		if (!IsValid(Actor)) continue;
 
+		FVector WindForce = normalizedWindDir * WindStrength * DeltaTime;
+
 		// Apply to physics objects
 		if (UPrimitiveComponent* PrimComp = Cast<UPrimitiveComponent>(Actor->GetRootComponent())) 
 		{
 			if (PrimComp->IsSimulatingPhysics())
 			{
-				PrimComp->AddForce(normalizedWindDir * WindStrength);
+				PrimComp->AddForce(WindForce);
+				continue;
+			}
+		}
+		else if (AChimeCharacter* Player = Cast<AChimeCharacter>(Actor))
+		{
+			if (Player->bIsGliding)
+			{
+				Player->GetCharacterMovement()->AddInputVector(WindForce);
 				continue;
 			}
 		}

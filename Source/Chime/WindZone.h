@@ -27,10 +27,10 @@ protected:
 	UBoxComponent* WindVolume;
 
 	// Wind Properties
-	UPROPERTY(EditAnywhere, Category = "Wind")
+	UPROPERTY(EditAnywhere, Category = "Wind Properties")
 	FVector WindDir = FVector(0, 0, 1.0f);
 
-	UPROPERTY(EditAnywhere, Category = "Wind")
+	UPROPERTY(EditAnywhere, Category = "Wind Properties")
 	float WindStrength = 5000.0f;
 
 	UFUNCTION()

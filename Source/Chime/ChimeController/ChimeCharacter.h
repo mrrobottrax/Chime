@@ -22,7 +22,7 @@ class AChimeCharacter : public ACharacter
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
 	UCameraComponent* FollowCamera;
 
-// System vars
+// -- System vars -- 
 protected:
 
 	// -- Input --
@@ -45,12 +45,13 @@ protected:
 	// Double jump
 	bool bHasDoubleJumped = false;
 
-	// -- Gliding -- 
-	bool bIsGliding = false;
-
 	// -- Crouching --
 	bool bIsCrouching = false;
 	bool bIsGroundPounding = false;
+
+public: 
+	// -- Gliding -- 
+	bool bIsGliding = false;
 
 // Constructor
 public:
