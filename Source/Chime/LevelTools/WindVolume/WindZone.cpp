@@ -43,7 +43,7 @@ void AWindZone::Tick(float DeltaTime)
 
 	if (!WindVolume) return;
 
-	FVector WindForce = WindVolume->WindDir.GetSafeNormal() * WindVolume->WindStrength * DeltaTime;
+	FVector WindForce = WindVolume->WindDir.GetSafeNormal() * WindVolume->WindStrength;
 
 	for (AActor* Actor : OverlappingActors)
 	{
@@ -55,6 +55,7 @@ void AWindZone::Tick(float DeltaTime)
 			if (PrimComp->IsSimulatingPhysics())
 			{
 				PrimComp->AddForce(WindForce);
+				continue;
 			}
 		}
 
@@ -63,7 +64,7 @@ void AWindZone::Tick(float DeltaTime)
 		{
 			if (Player->bIsGliding)
 			{
-				Player->GetCharacterMovement()->AddInputVector(WindForce);
+				Player->GetCharacterMovement()->Velocity += WindForce * DeltaTime;
 			}
 		}
 	}
@@ -75,7 +76,6 @@ void AWindZone::BeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* O
 	if (IsValid(OtherActor))
 	{
 		OverlappingActors.Add(OtherActor);
-		UE_LOG(LogTemp, Warning, TEXT("Add Actor: %s"), *OtherActor->GetName());
 	}
 }
 
@@ -85,7 +85,6 @@ void AWindZone::EndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* Oth
 	if (IsValid(OtherActor))
 	{
 		OverlappingActors.Remove(OtherActor);
-		UE_LOG(LogTemp, Warning, TEXT("Remove Actor: %s"), *OtherActor->GetName());
 	}
 }
 

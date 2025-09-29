@@ -7,7 +7,7 @@
 
 class UWindVolumeComponent;
 
-UCLASS()
+UCLASS(Blueprintable)
 class CHIME_API AWindZone : public AActor
 {
 	GENERATED_BODY()
