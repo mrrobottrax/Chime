@@ -52,6 +52,7 @@ protected:
 public: 
 	// -- Gliding -- 
 	bool bIsGliding = false;
+	bool bIsInWind = false;
 
 // Constructor
 public:
@@ -136,6 +137,13 @@ protected:
 
 	void DoGroundPound();
 
+public:
+
+	void OnEnterWind();
+
+	void OnExitWind();
+
+
 // Physics
 protected:
 
@@ -143,7 +151,7 @@ protected:
 	virtual bool CheckForWall(bool isJumpIgnored, FHitResult* result = nullptr);
 
 	/** Clamps the players z velocity based on falling state */
-	virtual void HandleFallingVelocity();
+	virtual void HandleVelocity();
 
 	/** Pauses the characters velocity and ignores input for a duration of time. 
 	Once the duration has elapsed, the passed in velocity will be applied.*/

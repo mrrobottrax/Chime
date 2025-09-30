@@ -92,17 +92,21 @@ void AWindZone::Tick(float DeltaTime)
 void AWindZone::BeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	if (IsValid(OtherActor))
-	{
-		OverlappingActors.Add(OtherActor);
-	}
+	if (!IsValid(OtherActor)) return;
+
+	OverlappingActors.Add(OtherActor);
+
+	if (AChimeCharacter* Player = Cast<AChimeCharacter>(OtherActor))
+		Player->OnEnterWind();
 }
 
 void AWindZone::EndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
-	if (IsValid(OtherActor))
-	{
-		OverlappingActors.Remove(OtherActor);
-	}
+	if (!IsValid(OtherActor)) return;
+
+	OverlappingActors.Remove(OtherActor);
+
+	if (AChimeCharacter* Player = Cast<AChimeCharacter>(OtherActor))
+		Player->OnExitWind();
 }

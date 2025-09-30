@@ -8,6 +8,7 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
+#include <Kismet/KismetMathLibrary.h>
 
 #pragma region Movement Constants
 
@@ -21,7 +22,6 @@ const float AirControl = 1.0f;
 
 // -- Jumping --
 const float DefaultJumpZVelocity = 900.0f;
-//const float DoubleJumpZVelocity = 700.0f;
 const float JumpMaxHoldTime = 0.25f;
 
 // Coyote Time
@@ -34,7 +34,7 @@ const int WallJumpAdjacentImpulse = 800;
 const int WallJumpVerticalImpulse = 900;
 const float WallJumpDelay = 0.4f;
 
-// -- Falling / Gravity --
+// -- Gravity --
 const float DefaultGravityScale = 2.5f;
 const float MaxFallingZVel = -3600.0f;
 const float FallingLateralFriction = 0.1f;
@@ -45,6 +45,7 @@ const float MaxWallXYVel = 60.0f;
 
 // Glide
 const float MaxGlideZVel = -170.0f;
+const float MaxWindVel = 1300.0f;// The maximum velocity while in a wind zone
 
 // -- Ground Pound --
 const int GroundPoundImpulse = 1800;
@@ -286,7 +287,7 @@ AChimeCharacter::AChimeCharacter()
 			StartWallSlide();
 
 		// Handle velocity clamping
-		HandleFallingVelocity();
+		HandleVelocity();
 	}
 
 #pragma endregion
@@ -391,11 +392,31 @@ AChimeCharacter::AChimeCharacter()
 	void AChimeCharacter::EndGlide()
 	{
 		bIsGliding = false;
+		GetCharacterMovement()->GravityScale = DefaultGravityScale;
 
 		UE_LOG(LogTemp, Warning, TEXT("End glide"));
 	}
 
-	void AChimeCharacter::DoGroundPound() 
+	void AChimeCharacter::OnEnterWind()
+	{
+		bIsInWind = true;
+
+		if (bIsGliding) 
+			GetCharacterMovement()->GravityScale = 0;
+
+		UE_LOG(LogTemp, Warning, TEXT("Player entered wind"));
+	}
+
+	void AChimeCharacter::OnExitWind()
+	{
+		bIsInWind = false;
+
+		GetCharacterMovement()->GravityScale = DefaultGravityScale;
+
+		UE_LOG(LogTemp, Warning, TEXT("Player exited wind"));
+	}
+
+	void AChimeCharacter::DoGroundPound()
 	{
 		bIsGroundPounding = true;
 		bIsGliding = false;
@@ -468,8 +489,7 @@ AChimeCharacter::AChimeCharacter()
 		return isWallHit;
 	}
 
-
-	void AChimeCharacter::HandleFallingVelocity()
+	void AChimeCharacter::HandleVelocity()
 	{
 		FVector Vel = GetCharacterMovement()->Velocity;
 
@@ -491,11 +511,23 @@ AChimeCharacter::AChimeCharacter()
 				GetCharacterMovement()->Velocity = Vel;
 			}
 		}
-		else if (bIsGliding && Vel.Z < MaxGlideZVel)
+		else if (bIsGliding)
 		{
-			// Gliding clamp
-			Vel.Z = MaxGlideZVel;
-			GetCharacterMovement()->Velocity = Vel;
+			// Wind velocity clamp
+			if (bIsInWind)
+			{
+				FVector currentVel = Vel;
+				FVector clampedVel = UKismetMathLibrary::ClampVectorSize(currentVel, 0, MaxWindVel);
+				GetCharacterMovement()->Velocity = clampedVel;
+				return;
+			}
+
+			// Standard glid clamp
+			if (Vel.Z < MaxGlideZVel) 
+			{
+				Vel.Z = MaxGlideZVel;
+				GetCharacterMovement()->Velocity = Vel;
+			}
 		}
 	}
 
