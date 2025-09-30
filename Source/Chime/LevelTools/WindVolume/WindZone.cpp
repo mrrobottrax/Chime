@@ -2,6 +2,7 @@
 #include "UWindVolumeComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Components/PrimitiveComponent.h"
+#include "Components/ArrowComponent.h"
 #include "Chime/ChimeController/ChimeCharacter.h"
 
 AWindZone::AWindZone()
@@ -24,6 +25,24 @@ AWindZone::AWindZone()
 	WindVolume->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
 	WindVolume->SetCollisionResponseToChannel(ECC_PhysicsBody, ECR_Overlap);
 	WindVolume->SetGenerateOverlapEvents(true);
+
+	// Arrow gizmo
+	UArrowComponent* Arrow = CreateDefaultSubobject<UArrowComponent>(TEXT("WindArrow"));
+	Arrow->SetupAttachment(RootComponent);
+	Arrow->ArrowSize = 3.0f;
+	Arrow->ArrowColor = FColor::Blue;
+	Arrow->bIsEditorOnly = true;
+}
+
+void AWindZone::OnConstruction(const FTransform& Transform)
+{
+	Super::OnConstruction(Transform);
+
+	if (UArrowComponent* Arrow = FindComponentByClass<UArrowComponent>())
+	{
+		FVector Up = GetActorUpVector();
+		Arrow->SetWorldRotation(Up.Rotation());
+	}
 }
 
 void AWindZone::BeginPlay()
@@ -43,7 +62,7 @@ void AWindZone::Tick(float DeltaTime)
 
 	if (!WindVolume) return;
 
-	FVector WindForce = WindVolume->WindDir.GetSafeNormal() * WindVolume->WindStrength;
+	FVector WindForce = GetActorUpVector() * WindVolume->WindStrength;
 
 	for (AActor* Actor : OverlappingActors)
 	{
@@ -87,4 +106,3 @@ void AWindZone::EndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* Oth
 		OverlappingActors.Remove(OtherActor);
 	}
 }
-

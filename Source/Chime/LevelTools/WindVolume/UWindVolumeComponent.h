@@ -10,8 +10,6 @@ class CHIME_API UWindVolumeComponent : public UBoxComponent
 	GENERATED_BODY()
 
 public:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Wind Properties")
-	FVector WindDir = FVector(0, 0, 1);
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Wind Properties")
 	float WindStrength = 5000.0f;
