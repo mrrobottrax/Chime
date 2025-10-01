@@ -1,10 +1,7 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
-#include "Mover.h"
+#include "RotatorComponent.h"
 
 // Sets default values for this component's properties
-UMover::UMover()
+URotatorComponent::URotatorComponent()
 {
 	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
 	// off to improve performance if you don't need them.
@@ -15,7 +12,7 @@ UMover::UMover()
 
 
 // Called when the game starts
-void UMover::BeginPlay()
+void URotatorComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
@@ -25,7 +22,7 @@ void UMover::BeginPlay()
 
 
 // Called every frame
-void UMover::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
+void URotatorComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
