@@ -32,6 +32,8 @@ public:
 	UPROPERTY(EditAnywhere)
 	bool PauseAtTarget;
 
+protected:
+
 	// System
 	FVector StartLocation;
 	FVector FinalLocation;// The start + end in worldspace

@@ -11,16 +11,19 @@ class CHIME_API URotatorComponent : public UActorComponent
 	GENERATED_BODY()
 
 public:	
-	// Sets default values for this component's properties
 	URotatorComponent();
 
 protected:
-	// Called when the game starts
 	virtual void BeginPlay() override;
 
+	void Rotate(float DeltaTime);
+
 public:	
-	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
-		
+	UPROPERTY(EditAnywhere)
+	FVector RotateAxis = FVector(0.0f, 0.0f, 1.0f);
+
+	UPROPERTY(EditAnywhere)
+	float RotateSpeed = 50.f;
 };

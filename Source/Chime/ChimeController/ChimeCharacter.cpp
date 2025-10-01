@@ -374,7 +374,7 @@ AChimeCharacter::AChimeCharacter()
 	void AChimeCharacter::TryGlide()
 	{
 		if (GetCharacterMovement()->IsFalling() && (bIsGroundPounding || bHasDoubleJumped) &&
-			!bIsGliding && !bIsOnWall)
+			!bIsGliding && !bIsOnWall && !bIsWallJumping)
 		{
 			// Kill downwards velocity
 			bIsGroundPounding = false;
