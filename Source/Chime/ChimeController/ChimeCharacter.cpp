@@ -45,7 +45,7 @@ const float MaxWallXYVel = 60.0f;
 
 // Glide
 const float MaxGlideZVel = -170.0f;
-const float MaxWindVel = 1300.0f;// The maximum velocity while in a wind zone
+const float MaxWindVel = 1000.0f;// The maximum velocity while in a wind zone
 
 // -- Ground Pound --
 const int GroundPoundImpulse = 1800;

@@ -5,6 +5,8 @@
 #include "Components/ArrowComponent.h"
 #include "Chime/ChimeController/ChimeCharacter.h"
 
+const float dampeningForce = 2.5f;
+
 AWindZone::AWindZone()
 {
 	PrimaryActorTick.bCanEverTick = true;
@@ -62,18 +64,19 @@ void AWindZone::Tick(float DeltaTime)
 
 	if (!WindVolume) return;
 
-	FVector WindForce = GetActorUpVector() * WindVolume->WindStrength;
 
 	for (AActor* Actor : OverlappingActors)
 	{
 		if (!IsValid(Actor)) continue;
+
+		FVector windForce = GetActorUpVector() * WindVolume->WindStrength;
 
 		// Apply to physics objects
 		if (UPrimitiveComponent* PrimComp = Cast<UPrimitiveComponent>(Actor->GetRootComponent()))
 		{
 			if (PrimComp->IsSimulatingPhysics())
 			{
-				PrimComp->AddForce(WindForce);
+				PrimComp->AddForce(windForce);
 				continue;
 			}
 		}
@@ -83,7 +86,12 @@ void AWindZone::Tick(float DeltaTime)
 		{
 			if (Player->bIsGliding)
 			{
-				Player->GetCharacterMovement()->Velocity += WindForce * DeltaTime;
+				FVector playerVel = Player->GetCharacterMovement()->Velocity;
+
+				// Smoothly lerp the players entry velocity to match the winds velocity
+				FVector newVelocity = FMath::Lerp(playerVel, windForce, dampeningForce * DeltaTime);
+			
+				Player->GetCharacterMovement()->Velocity = newVelocity;
 			}
 		}
 	}

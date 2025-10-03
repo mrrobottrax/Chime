@@ -12,5 +12,5 @@ class CHIME_API UWindVolumeComponent : public UBoxComponent
 public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Wind Properties")
-	float WindStrength = 5000.0f;
+	float WindStrength = 2000.0f;
 };
