@@ -10,18 +10,23 @@ class CHIME_API UGameManager : public UGameInstanceSubsystem
 {
 	GENERATED_BODY()
 	
+public:
+
 	virtual void Initialize(FSubsystemCollectionBase& Collection)override;
 
 	virtual void Deinitialize() override;
 
-public:
-	void LoadLevel(FString name);
+	UFUNCTION(BlueprintCallable, Category = "Spawning")
+	FVector GetCurrentPlayerSpawn() const { return CurrentPlayerSpawn; }
+
+	UFUNCTION(BlueprintCallable, Category = "Spawning")
+	void UpdatePlayerSpawn(const FVector& NewLocation) { CurrentPlayerSpawn = NewLocation; }
 
 private:
-	UPROPERTY(BlueprintReadOnly, Category = "Spawning", meta = (AllowPrivateAccess = "true"))
+
 	FVector CurrentPlayerSpawn;
 
-	UFUNCTION()
-	void OnPostLoadMap(UWorld* LoadedWorld);
+	void OnWorldInit(UWorld* World, const UWorld::InitializationValues IVS);
+
 	void CachePlayerStart(UWorld* World);
 };

@@ -16,6 +16,7 @@ public:
 
 	void Respawn();
 
+	UFUNCTION(BlueprintCallable, Category = "PlayerState")
 	void Die();
 
 protected:
