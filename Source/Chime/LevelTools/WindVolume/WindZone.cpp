@@ -3,7 +3,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Components/PrimitiveComponent.h"
 #include "Components/ArrowComponent.h"
-#include "Chime/ChimeController/ChimeCharacter.h"
+#include "Chime/Player/ChimeController/ChimeCharacter.h"
 
 const float dampeningForce = 2.5f;
 
