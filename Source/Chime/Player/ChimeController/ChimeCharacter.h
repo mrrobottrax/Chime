@@ -54,7 +54,7 @@ public:
 	// -- Gliding -- 
 	bool bIsGliding = false;
 	bool bIsInWind = false;
-	AWindZone* currentWindZone = nullptr;
+	AWindZone* CurrentWindZone = nullptr;
 
 // Constructor
 public:
@@ -141,9 +141,9 @@ protected:
 
 public:
 
-	void OnEnterWind();
+	void OnEnterWind(AWindZone* windZone);
 
-	void OnExitWind();
+	void OnExitWind(AWindZone* windZone);
 
 
 // Physics

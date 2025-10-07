@@ -45,7 +45,7 @@ const float MaxWallXYVel = 60.0f;
 
 // Glide
 const float MaxGlideZVel = -170.0f;
-const float MaxWindVel = 1000.0f;// The maximum velocity while in a wind zone
+const float MaxWindVel = 3000.0f;// The maximum velocity while in a wind zone
 
 // -- Ground Pound --
 const int GroundPoundImpulse = 1800;
@@ -313,21 +313,21 @@ AChimeCharacter::AChimeCharacter()
 
 					// Apply a launch impulse to the player
 					const FVector WallJumpImpulse =
-						(Hit.ImpactNormal * WallJumpAdjacentImpulse) +
-						(FVector::UpVector * WallJumpVerticalImpulse);
+						(Hit.ImpactNormal* WallJumpAdjacentImpulse) +
+							(FVector::UpVector * WallJumpVerticalImpulse);
 
-					LaunchCharacter(WallJumpImpulse, true, true);
+						LaunchCharacter(WallJumpImpulse, true, true);
 
-					bIsWallJumping = true;
-					GetWorld()->GetTimerManager().SetTimer(
-						WallJumpTimer,
-						this,
-						&AChimeCharacter::OnWallJumpEnd,
-						WallJumpDelay,
-						false
-					);
+						bIsWallJumping = true;
+						GetWorld()->GetTimerManager().SetTimer(
+							WallJumpTimer,
+							this,
+							&AChimeCharacter::OnWallJumpEnd,
+							WallJumpDelay,
+							false
+						);
 
-					UE_LOG(LogTemp, Warning, TEXT("Wall Jump"));
+						UE_LOG(LogTemp, Warning, TEXT("Wall Jump"));
 				}
 				else if (!bIsWallJumping)
 				{
@@ -400,23 +400,29 @@ AChimeCharacter::AChimeCharacter()
 		UE_LOG(LogTemp, Warning, TEXT("End glide"));
 	}
 
-	void AChimeCharacter::OnEnterWind()
+	void AChimeCharacter::OnEnterWind(AWindZone* windZone)
 	{
+		if (!IsValid(windZone))
+			return;
+
+		CurrentWindZone = windZone;
 		bIsInWind = true;
 
-		if (bIsGliding) 
+		if (bIsGliding)
 			GetCharacterMovement()->GravityScale = 0;
 
 		UE_LOG(LogTemp, Warning, TEXT("Player entered wind"));
 	}
 
-	void AChimeCharacter::OnExitWind()
+	void AChimeCharacter::OnExitWind(AWindZone* windZone)
 	{
-		bIsInWind = false;
-
-		GetCharacterMovement()->GravityScale = DefaultGravityScale;
-
-		UE_LOG(LogTemp, Warning, TEXT("Player exited wind"));
+		if (IsValid(CurrentWindZone) && CurrentWindZone == windZone)
+		{
+			bIsInWind = false;
+			CurrentWindZone = nullptr;
+			GetCharacterMovement()->GravityScale = DefaultGravityScale;
+			UE_LOG(LogTemp, Warning, TEXT("Player exited wind"));
+		}
 	}
 
 	void AChimeCharacter::DoGroundPound()

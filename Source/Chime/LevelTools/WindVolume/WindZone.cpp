@@ -81,10 +81,11 @@ void AWindZone::Tick(float DeltaTime)
 			}
 		}
 
-		// Apply to gliding player
+		// Override player velocity to wind direction
 		if (AChimeCharacter* Player = Cast<AChimeCharacter>(Actor))
 		{
-			if (Player->bIsGliding)
+			if (Player->bIsGliding && 
+				IsValid(Player->CurrentWindZone) && Player->CurrentWindZone == this)
 			{
 				FVector playerVel = Player->GetCharacterMovement()->Velocity;
 
@@ -105,7 +106,7 @@ void AWindZone::BeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* O
 	OverlappingActors.Add(OtherActor);
 
 	if (AChimeCharacter* Player = Cast<AChimeCharacter>(OtherActor))
-		Player->OnEnterWind();
+		Player->OnEnterWind(this);
 }
 
 void AWindZone::EndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
@@ -116,5 +117,5 @@ void AWindZone::EndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* Oth
 	OverlappingActors.Remove(OtherActor);
 
 	if (AChimeCharacter* Player = Cast<AChimeCharacter>(OtherActor))
-		Player->OnExitWind();
+		Player->OnExitWind(this);
 }
