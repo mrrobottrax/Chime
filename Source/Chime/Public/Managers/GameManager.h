@@ -25,8 +25,4 @@ public:
 private:
 
 	FVector CurrentPlayerSpawn;
-
-	void OnWorldInit(UWorld* World, const UWorld::InitializationValues IVS);
-
-	void CachePlayerStart(UWorld* World);
 };

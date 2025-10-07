@@ -9,6 +9,7 @@
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
 #include <Kismet/KismetMathLibrary.h>
+#include "Managers/GameManager.h"
 
 #pragma region Movement Constants
 
@@ -52,7 +53,6 @@ const int GroundPoundImpulse = 1800;
 const float GroundPoundInputBuffer = 0.15f;
 
 #pragma endregion
-
 
 AChimeCharacter::AChimeCharacter()
 {
@@ -99,6 +99,24 @@ AChimeCharacter::AChimeCharacter()
 	// Unreal assumes you made a jump when you enter the falling state.
 	// This is a hacky fix that Unreal recomends officially! :D
 	JumpMaxCount = 3;
+}
+
+void AChimeCharacter::BeginPlay()
+{
+	Super::BeginPlay();
+
+	// Set player spawn
+	if (UWorld* World = GetWorld())
+	{
+		if (UGameInstance* GI = World->GetGameInstance())
+		{
+			UGameManager* gameManager = GI->GetSubsystem<UGameManager>();
+			if (gameManager)
+			{
+				gameManager->UpdatePlayerSpawn(GetActorLocation());
+			}
+		}
+	}
 }
 
 #pragma region Character Functions
