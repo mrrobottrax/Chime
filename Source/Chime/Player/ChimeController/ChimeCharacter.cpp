@@ -382,6 +382,9 @@ AChimeCharacter::AChimeCharacter()
 			Vel.Z = 0;
 			GetCharacterMovement()->Velocity = Vel;
 
+			if (bIsInWind)
+				GetCharacterMovement()->GravityScale = 0;
+
 			// Start glide
 			bIsGliding = true;
 

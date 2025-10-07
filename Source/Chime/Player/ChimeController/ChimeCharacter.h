@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "Chime/LevelTools/WindVolume/WindZone.h"
 #include "ChimeCharacter.generated.h"
 
 class USpringArmComponent;
@@ -53,6 +54,7 @@ public:
 	// -- Gliding -- 
 	bool bIsGliding = false;
 	bool bIsInWind = false;
+	AWindZone* currentWindZone = nullptr;
 
 // Constructor
 public:
