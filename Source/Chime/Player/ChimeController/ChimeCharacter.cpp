@@ -10,47 +10,51 @@
 #include "InputActionValue.h"
 #include <Kismet/KismetMathLibrary.h>
 #include "Managers/GameManager.h"
+#include "DrawDebugHelpers.h"
 
 #pragma region Movement Constants
 
 // -- Walking / Ground Movement --
-const float MaxWalkSpeed = 640.0f;
-const float BreakingDecelerationWalking = 4000.0f;
-const float MaxAcceleration = 1000.0f;
-const float BrakingFrictionFactor = 1.0f;
-const float GroundFriction = 10.0f;
-const float AirControl = 1.0f;
+const float kMaxWalkSpeed = 640.0f;
+const float kBreakingDecelerationWalking = 4000.0f;
+const float kMaxAcceleration = 1000.0f;
+const float kBrakingFrictionFactor = 1.0f;
+const float kGroundFriction = 10.0f;
+const float kAirControl = 1.0f;
 
 // -- Jumping --
-const float DefaultJumpZVelocity = 900.0f;
-const float JumpMaxHoldTime = 0.25f;
+const float kDefaultJumpZVelocity = 700.0f;
+const float kJumpMaxHoldTime = 0.25f;
 
 // Coyote Time
-const float MaxCoyoteTime = 0.18f;
+const float kMaxCoyoteTime = 0.18f;
 
 // -- Wall Jump --
-const float WallJumpTraceDistance = 50.0f;
-const float WallJumpTraceRadius = 10.0f;
-const int WallJumpAdjacentImpulse = 800;
-const int WallJumpVerticalImpulse = 900;
-const float WallJumpDelay = 0.4f;
+const float kWallJumpTraceDistance = 50.0f;
+const float kWallJumpTraceRadius = 10.0f;
+const int kWallJumpAdjacentImpulse = 800;
+const int kWallJumpVerticalImpulse = 900;
+const float kWallJumpDelay = 0.4f;
 
 // -- Gravity --
-const float DefaultGravityScale = 2.5f;
-const float MaxFallingZVel = -3600.0f;
-const float FallingLateralFriction = 0.1f;
+const float kDefaultGravityScale = 3.0f;
+const float kMaxFallingZVel = -3600.0f;
+const float kFallingLateralFriction = 0.1f;
 
 // Wall falling clamps
-const float MaxWallZVel = -400.0f;
-const float MaxWallXYVel = 60.0f;
+const float kMaxWallZVel = -400.0f;
+const float kMaxWallXYVel = 60.0f;
 
 // Glide
-const float MaxGlideZVel = -170.0f;
-const float MaxWindVel = 3000.0f;// The maximum velocity while in a wind zone
+const float kMaxGlideZVel = -170.0f;
+const float kMaxWindVel = 3000.0f;// The maximum velocity while in a wind zone
 
 // -- Ground Pound --
-const int GroundPoundImpulse = 1800;
-const float GroundPoundInputBuffer = 0.15f;
+const int kGroundPoundImpulse = 1800;
+const float kGroundPoundInputBuffer = 0.15f;
+
+// -- Context Action --
+const float kPokeTraceDistance = 170.0f;
 
 #pragma endregion
 
@@ -78,20 +82,20 @@ AChimeCharacter::AChimeCharacter()
 	MoveComp->RotationRate = FRotator(0.0f, 500.0f, 0.0f);
 
 	// Movement constants
-	MoveComp->MaxWalkSpeed = MaxWalkSpeed;
-	MoveComp->BrakingDecelerationWalking = BreakingDecelerationWalking;
-	MoveComp->MaxAcceleration = MaxAcceleration;
-	MoveComp->BrakingFrictionFactor = BrakingFrictionFactor;
-	MoveComp->GroundFriction = GroundFriction;
-	MoveComp->AirControl = AirControl;
+	MoveComp->MaxWalkSpeed = kMaxWalkSpeed;
+	MoveComp->BrakingDecelerationWalking = kBreakingDecelerationWalking;
+	MoveComp->MaxAcceleration = kMaxAcceleration;
+	MoveComp->BrakingFrictionFactor = kBrakingFrictionFactor;
+	MoveComp->GroundFriction = kGroundFriction;
+	MoveComp->AirControl = kAirControl;
 
 	// Jumping
-	JumpMaxHoldTime = JumpMaxHoldTime;
-	MoveComp->JumpZVelocity = DefaultJumpZVelocity;
+	JumpMaxHoldTime = kJumpMaxHoldTime;
+	MoveComp->JumpZVelocity = kDefaultJumpZVelocity;
 
 	// Gravity / Falling
-	MoveComp->GravityScale = DefaultGravityScale;
-	MoveComp->FallingLateralFriction = FallingLateralFriction;
+	MoveComp->GravityScale = kDefaultGravityScale;
+	MoveComp->FallingLateralFriction = kFallingLateralFriction;
 
 	// Misc
 	MoveComp->bUseFlatBaseForFloorChecks = true;
@@ -282,12 +286,10 @@ void AChimeCharacter::BeginPlay()
 
 	void AChimeCharacter::DoContext()
 	{
-		// Poke input goes here
-
-		/*
-		if (bIsMovementRestricted || bIsOnWall)
+		if (bIsInputRestricted || bIsWallJumping || bIsGroundPounding)
 			return;
-		*/
+
+		TryContextAction();
 	}
 #pragma endregion
 
@@ -331,8 +333,8 @@ void AChimeCharacter::BeginPlay()
 
 					// Apply a launch impulse to the player
 					const FVector WallJumpImpulse =
-						(Hit.ImpactNormal* WallJumpAdjacentImpulse) +
-							(FVector::UpVector * WallJumpVerticalImpulse);
+						(Hit.ImpactNormal* kWallJumpAdjacentImpulse) +
+							(FVector::UpVector * kWallJumpVerticalImpulse);
 
 						LaunchCharacter(WallJumpImpulse, true, true);
 
@@ -341,7 +343,7 @@ void AChimeCharacter::BeginPlay()
 							WallJumpTimer,
 							this,
 							&AChimeCharacter::OnWallJumpEnd,
-							WallJumpDelay,
+							kWallJumpDelay,
 							false
 						);
 
@@ -350,7 +352,7 @@ void AChimeCharacter::BeginPlay()
 				else if (!bIsWallJumping)
 				{
 					// Check for coyote time
-					if (GetWorld()->GetTimeSeconds() - LastFallTime < MaxCoyoteTime)
+					if (GetWorld()->GetTimeSeconds() - LastFallTime < kMaxCoyoteTime)
 					{
 						Jump();
 						UE_LOG(LogTemp, Warning, TEXT("Coyote Jump"));
@@ -413,7 +415,7 @@ void AChimeCharacter::BeginPlay()
 	void AChimeCharacter::EndGlide()
 	{
 		bIsGliding = false;
-		GetCharacterMovement()->GravityScale = DefaultGravityScale;
+		GetCharacterMovement()->GravityScale = kDefaultGravityScale;
 
 		UE_LOG(LogTemp, Warning, TEXT("End glide"));
 	}
@@ -438,7 +440,7 @@ void AChimeCharacter::BeginPlay()
 		{
 			bIsInWind = false;
 			CurrentWindZone = nullptr;
-			GetCharacterMovement()->GravityScale = DefaultGravityScale;
+			GetCharacterMovement()->GravityScale = kDefaultGravityScale;
 			UE_LOG(LogTemp, Warning, TEXT("Player exited wind"));
 		}
 	}
@@ -450,10 +452,59 @@ void AChimeCharacter::BeginPlay()
 		bIsOnWall = false;
 
 		// Pause movement and get downwards impulse
-		const FVector PoundImpulse = FVector::DownVector * GroundPoundImpulse;
-		PauseMovement(GroundPoundInputBuffer, PoundImpulse);
+		const FVector PoundImpulse = FVector::DownVector * kGroundPoundImpulse;
+		PauseMovement(kGroundPoundInputBuffer, PoundImpulse);
 
 		UE_LOG(LogTemp, Warning, TEXT("Ground pound"));
+	}
+
+	void AChimeCharacter::TryContextAction() 
+	{
+		FVector traceStart = GetActorLocation();
+		const FVector traceEnd = traceStart + (GetActorForwardVector() * kPokeTraceDistance);
+
+		FHitResult hitResult;
+		FCollisionQueryParams QueryParams;
+		QueryParams.AddIgnoredActor(this);// Ignore self
+		QueryParams.bReturnPhysicalMaterial = true;
+		QueryParams.bTraceComplex = false;
+
+		bool bIsActorHit = GetWorld()->LineTraceSingleByChannel(
+			hitResult,
+			traceStart,
+			traceEnd,
+			ECC_Visibility,
+			QueryParams
+		);
+
+		DrawDebugLine(
+			GetWorld(),
+			traceStart,
+			traceEnd,
+			FColor::Red,
+			false,
+			2.0f,
+			0,
+			2.0f
+		);
+
+		if (bIsActorHit)
+		{
+			if (IsValid(hitResult.PhysMaterial.Get()))
+			{
+				EPhysicalSurface SurfaceType = UPhysicalMaterial::DetermineSurfaceType(hitResult.PhysMaterial.Get());
+
+				switch (SurfaceType)
+				{
+				case EPhysicalSurface::SurfaceType1:
+					UE_LOG(LogTemp, Warning, TEXT("Hit Wood Surface!"));
+						break;
+				case EPhysicalSurface::SurfaceType2:
+					UE_LOG(LogTemp, Warning, TEXT("Hit Metal Surface!"));
+						break;
+				}
+			}
+		}
 	}
 
 #pragma endregion
@@ -489,24 +540,24 @@ void AChimeCharacter::BeginPlay()
 		if (bIsGroundPounding || (!isJumpIgnored && bIsJumpPressed) || !GetCharacterMovement()->IsFalling())
 			return false;
 
+		// Cast capsule forward
+		FVector traceStart = GetActorLocation(); 
+		const FVector traceEnd = traceStart + (GetActorForwardVector() * kWallJumpTraceDistance); 
+		const FCollisionShape traceShape = FCollisionShape::MakeSphere(kWallJumpTraceRadius);
+
 		// Ignore self
+		FHitResult hitResult;
 		FCollisionQueryParams QueryParams;
 		QueryParams.AddIgnoredActor(this);
-
-		// Cast capsule forward
-		FHitResult hitResult; const 
-		FVector Location = GetActorLocation(); 
-		const FVector TraceEnd = Location + (GetActorForwardVector() * WallJumpTraceDistance); 
-		const FCollisionShape TraceShape = FCollisionShape::MakeSphere(WallJumpTraceRadius);
 
 		bool isWallHit = GetWorld()->SweepSingleByChannel
 		(
 			hitResult,
-			Location, 
-			TraceEnd, 
+			traceStart, 
+			traceEnd, 
 			FQuat(), 
 			ECollisionChannel::ECC_Visibility, 
-			TraceShape, 
+			traceShape, 
 			QueryParams
 		);
 
@@ -520,21 +571,21 @@ void AChimeCharacter::BeginPlay()
 	{
 		FVector Vel = GetCharacterMovement()->Velocity;
 
-		if (Vel.Z < MaxFallingZVel)
+		if (Vel.Z < kMaxFallingZVel)
 		{
 			// Regular falling clamp
-			Vel.Z = MaxFallingZVel;
+			Vel.Z = kMaxFallingZVel;
 			GetCharacterMovement()->Velocity = Vel;
 		}
 		else if (bIsOnWall)
 		{
 			// Clamp wall slide vel
-			Vel.X = FMath::Clamp(Vel.X, -MaxWallXYVel, MaxWallXYVel);
-			Vel.Y = FMath::Clamp(Vel.Y, -MaxWallXYVel, MaxWallXYVel);
+			Vel.X = FMath::Clamp(Vel.X, -kMaxWallXYVel, kMaxWallXYVel);
+			Vel.Y = FMath::Clamp(Vel.Y, -kMaxWallXYVel, kMaxWallXYVel);
 
-			if (Vel.Z < MaxWallZVel)
+			if (Vel.Z < kMaxWallZVel)
 			{
-				Vel.Z = MaxWallZVel;
+				Vel.Z = kMaxWallZVel;
 				GetCharacterMovement()->Velocity = Vel;
 			}
 		}
@@ -544,15 +595,15 @@ void AChimeCharacter::BeginPlay()
 			if (bIsInWind)
 			{
 				FVector currentVel = Vel;
-				FVector clampedVel = UKismetMathLibrary::ClampVectorSize(currentVel, 0, MaxWindVel);
+				FVector clampedVel = UKismetMathLibrary::ClampVectorSize(currentVel, 0, kMaxWindVel);
 				GetCharacterMovement()->Velocity = clampedVel;
 				return;
 			}
 
 			// Standard glid clamp
-			if (Vel.Z < MaxGlideZVel) 
+			if (Vel.Z < kMaxGlideZVel) 
 			{
-				Vel.Z = MaxGlideZVel;
+				Vel.Z = kMaxGlideZVel;
 				GetCharacterMovement()->Velocity = Vel;
 			}
 		}

@@ -141,6 +141,8 @@ protected:
 
 	void DoGroundPound();
 
+	void TryContextAction();
+
 public:
 
 	void OnEnterWind(AWindZone* windZone);
