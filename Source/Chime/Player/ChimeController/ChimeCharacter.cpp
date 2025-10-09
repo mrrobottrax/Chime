@@ -250,8 +250,6 @@ void AChimeCharacter::BeginPlay()
 
 		// Try normal jump
 		TryJump();
-
-		UE_LOG(LogTemp, Warning, TEXT("Hello"));
 	}
 
 	void AChimeCharacter::DoJumpEnd()
@@ -303,9 +301,7 @@ void AChimeCharacter::BeginPlay()
 
 		if (CurrentContextAction == EContextAction::ECS_Poking) 
 		{
-			GetCharacterMovement()->SetMovementMode(MOVE_Walking);
-			GetCharacterMovement()->GravityScale = kDefaultGravityScale;
-			this->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+			UnstickFromSurface();
 		}
 
 		// Reset
@@ -355,6 +351,10 @@ void AChimeCharacter::BeginPlay()
 					const FVector WallJumpImpulse =
 						(Hit.ImpactNormal* kWallJumpAdjacentImpulse) +
 							(FVector::UpVector * kWallJumpVerticalImpulse);
+
+					// Break from wall poke
+					if (CurrentContextAction == EContextAction::ECS_Poking)
+						UnstickFromSurface();
 
 						LaunchCharacter(WallJumpImpulse, true, true);
 
@@ -556,6 +556,13 @@ void AChimeCharacter::BeginPlay()
 		GetCharacterMovement()->GravityScale = 0;
 		GetCharacterMovement()->StopActiveMovement();
 		this->AttachToActor(hitResult.GetActor(), FAttachmentTransformRules::KeepWorldTransform);
+	}
+
+	void AChimeCharacter::UnstickFromSurface()
+	{
+		GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+		GetCharacterMovement()->GravityScale = kDefaultGravityScale;
+		this->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
 	}
 
 	void AChimeCharacter::StartDragObject(FHitResult hitResult)

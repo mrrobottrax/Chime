@@ -159,6 +159,8 @@ protected:
 
 	void StickToSurface(FHitResult hitResult);
 
+	void UnstickFromSurface();
+
 	void StartDragObject(FHitResult hitResult);
 
 public:
