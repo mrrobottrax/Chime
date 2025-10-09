@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "Chime/LevelTools/WindVolume/WindZone.h"
 #include "ChimeCharacter.generated.h"
 
 class USpringArmComponent;
@@ -53,13 +54,16 @@ public:
 	// -- Gliding -- 
 	bool bIsGliding = false;
 	bool bIsInWind = false;
+	AWindZone* CurrentWindZone = nullptr;
 
 // Constructor
 public:
 	AChimeCharacter();
 
 // Unreal Callbacks
-public:
+protected:
+
+	virtual void BeginPlay() override;
 
 	virtual void Tick(float DeltaTime) override;
 
@@ -139,9 +143,9 @@ protected:
 
 public:
 
-	void OnEnterWind();
+	void OnEnterWind(AWindZone* windZone);
 
-	void OnExitWind();
+	void OnExitWind(AWindZone* windZone);
 
 
 // Physics

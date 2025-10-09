@@ -9,6 +9,7 @@
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
 #include <Kismet/KismetMathLibrary.h>
+#include "Managers/GameManager.h"
 
 #pragma region Movement Constants
 
@@ -45,14 +46,13 @@ const float MaxWallXYVel = 60.0f;
 
 // Glide
 const float MaxGlideZVel = -170.0f;
-const float MaxWindVel = 1000.0f;// The maximum velocity while in a wind zone
+const float MaxWindVel = 3000.0f;// The maximum velocity while in a wind zone
 
 // -- Ground Pound --
 const int GroundPoundImpulse = 1800;
 const float GroundPoundInputBuffer = 0.15f;
 
 #pragma endregion
-
 
 AChimeCharacter::AChimeCharacter()
 {
@@ -99,6 +99,24 @@ AChimeCharacter::AChimeCharacter()
 	// Unreal assumes you made a jump when you enter the falling state.
 	// This is a hacky fix that Unreal recomends officially! :D
 	JumpMaxCount = 3;
+}
+
+void AChimeCharacter::BeginPlay()
+{
+	Super::BeginPlay();
+
+	// Set player spawn
+	if (UWorld* World = GetWorld())
+	{
+		if (UGameInstance* GI = World->GetGameInstance())
+		{
+			UGameManager* gameManager = GI->GetSubsystem<UGameManager>();
+			if (gameManager)
+			{
+				gameManager->UpdatePlayerSpawn(GetActorLocation());
+			}
+		}
+	}
 }
 
 #pragma region Character Functions
@@ -313,21 +331,21 @@ AChimeCharacter::AChimeCharacter()
 
 					// Apply a launch impulse to the player
 					const FVector WallJumpImpulse =
-						(Hit.ImpactNormal * WallJumpAdjacentImpulse) +
-						(FVector::UpVector * WallJumpVerticalImpulse);
+						(Hit.ImpactNormal* WallJumpAdjacentImpulse) +
+							(FVector::UpVector * WallJumpVerticalImpulse);
 
-					LaunchCharacter(WallJumpImpulse, true, true);
+						LaunchCharacter(WallJumpImpulse, true, true);
 
-					bIsWallJumping = true;
-					GetWorld()->GetTimerManager().SetTimer(
-						WallJumpTimer,
-						this,
-						&AChimeCharacter::OnWallJumpEnd,
-						WallJumpDelay,
-						false
-					);
+						bIsWallJumping = true;
+						GetWorld()->GetTimerManager().SetTimer(
+							WallJumpTimer,
+							this,
+							&AChimeCharacter::OnWallJumpEnd,
+							WallJumpDelay,
+							false
+						);
 
-					UE_LOG(LogTemp, Warning, TEXT("Wall Jump"));
+						UE_LOG(LogTemp, Warning, TEXT("Wall Jump"));
 				}
 				else if (!bIsWallJumping)
 				{
@@ -382,6 +400,9 @@ AChimeCharacter::AChimeCharacter()
 			Vel.Z = 0;
 			GetCharacterMovement()->Velocity = Vel;
 
+			if (bIsInWind)
+				GetCharacterMovement()->GravityScale = 0;
+
 			// Start glide
 			bIsGliding = true;
 
@@ -397,23 +418,29 @@ AChimeCharacter::AChimeCharacter()
 		UE_LOG(LogTemp, Warning, TEXT("End glide"));
 	}
 
-	void AChimeCharacter::OnEnterWind()
+	void AChimeCharacter::OnEnterWind(AWindZone* windZone)
 	{
+		if (!IsValid(windZone))
+			return;
+
+		CurrentWindZone = windZone;
 		bIsInWind = true;
 
-		if (bIsGliding) 
+		if (bIsGliding)
 			GetCharacterMovement()->GravityScale = 0;
 
 		UE_LOG(LogTemp, Warning, TEXT("Player entered wind"));
 	}
 
-	void AChimeCharacter::OnExitWind()
+	void AChimeCharacter::OnExitWind(AWindZone* windZone)
 	{
-		bIsInWind = false;
-
-		GetCharacterMovement()->GravityScale = DefaultGravityScale;
-
-		UE_LOG(LogTemp, Warning, TEXT("Player exited wind"));
+		if (IsValid(CurrentWindZone) && CurrentWindZone == windZone)
+		{
+			bIsInWind = false;
+			CurrentWindZone = nullptr;
+			GetCharacterMovement()->GravityScale = DefaultGravityScale;
+			UE_LOG(LogTemp, Warning, TEXT("Player exited wind"));
+		}
 	}
 
 	void AChimeCharacter::DoGroundPound()
