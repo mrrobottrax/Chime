@@ -250,6 +250,8 @@ void AChimeCharacter::BeginPlay()
 
 		// Try normal jump
 		TryJump();
+
+		UE_LOG(LogTemp, Warning, TEXT("Hello"));
 	}
 
 	void AChimeCharacter::DoJumpEnd()
@@ -536,7 +538,17 @@ void AChimeCharacter::BeginPlay()
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Poke into surface"));
 
-		FVector HitLocation = hitResult.Location;
+		FVector WallNormal = hitResult.ImpactNormal;
+
+		// Face wall
+		FRotator TargetRotation = (-WallNormal).Rotation();
+		SetActorRotation(TargetRotation);
+
+		// Snap to wall surface
+		FVector hitLocation = hitResult.Location;
+		FVector dirToPlayer = hitLocation - GetActorLocation();
+		FVector newLocation = hitLocation + (WallNormal * GetCapsuleComponent()->GetUnscaledCapsuleRadius());
+		SetActorLocation(newLocation);
 
 		CurrentContextAction = EContextAction::ECS_Poking;
 
