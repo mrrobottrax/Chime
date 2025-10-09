@@ -24,7 +24,7 @@ class AChimeCharacter : public ACharacter
 	UCameraComponent* FollowCamera;
 
 // -- System vars -- 
-protected:
+private:
 
 	// -- Input --
 	FVector2D InputDirection;
@@ -49,6 +49,16 @@ protected:
 	// -- Crouching --
 	bool bIsCrouching = false;
 	bool bIsGroundPounding = false;
+
+	// -- Context Action
+	bool isActionPressed = false;
+	enum class EContextAction : uint8
+	{
+		ECS_None UMETA(DisplayName = "None"),
+		ECS_Poking UMETA(DisplayName = "Poking"),
+		ECS_Dragging UMETA(DisplayName = "Dragging")
+	};
+	EContextAction CurrentContextAction;
 
 public: 
 	// -- Gliding -- 
@@ -120,7 +130,11 @@ public:
 
 	/** Handles context defined inputs */
 	UFUNCTION(BlueprintCallable, Category = "Input")
-	virtual void DoContext();
+	virtual void DoContextStart();
+
+	/** Handles context defined inputs */
+	UFUNCTION(BlueprintCallable, Category = "Input")
+	virtual void DoContextEnd();
 
 // Actions
 protected:
@@ -142,6 +156,10 @@ protected:
 	void DoGroundPound();
 
 	void TryContextAction();
+
+	void StickToSurface(FHitResult hitResult);
+
+	void StartDragObject(FHitResult hitResult);
 
 public:
 

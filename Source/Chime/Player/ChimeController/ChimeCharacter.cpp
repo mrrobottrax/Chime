@@ -145,7 +145,8 @@ void AChimeCharacter::BeginPlay()
 			EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Completed, this, &AChimeCharacter::DoCrouchEnd);
 
 			// Context-ing?
-			EnhancedInputComponent->BindAction(ContextAction, ETriggerEvent::Started, this, &AChimeCharacter::DoContext);
+			EnhancedInputComponent->BindAction(ContextAction, ETriggerEvent::Started, this, &AChimeCharacter::DoContextStart);
+			EnhancedInputComponent->BindAction(ContextAction, ETriggerEvent::Completed, this, &AChimeCharacter::DoContextEnd);
 		}
 	}
 
@@ -284,12 +285,29 @@ void AChimeCharacter::BeginPlay()
 		bIsCrouched = false;
 	}
 
-	void AChimeCharacter::DoContext()
+	void AChimeCharacter::DoContextStart()
 	{
+		isActionPressed = true;
+
 		if (bIsInputRestricted || bIsWallJumping || bIsGroundPounding)
 			return;
 
 		TryContextAction();
+	}
+
+	void AChimeCharacter::DoContextEnd()
+	{
+		isActionPressed = false;
+
+		if (CurrentContextAction == EContextAction::ECS_Poking) 
+		{
+			GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+			GetCharacterMovement()->GravityScale = kDefaultGravityScale;
+			this->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+		}
+
+		// Reset
+		CurrentContextAction = EContextAction::ECS_None;
 	}
 #pragma endregion
 
@@ -496,17 +514,42 @@ void AChimeCharacter::BeginPlay()
 
 				switch (SurfaceType)
 				{
-				case EPhysicalSurface::SurfaceType1:
-					UE_LOG(LogTemp, Warning, TEXT("Hit Wood Surface!"));
+					case EPhysicalSurface::SurfaceType1:
+						// Soft surface
+						if (hitResult.GetComponent()->IsSimulatingPhysics())
+							StartDragObject(hitResult);
+						else
+							StickToSurface(hitResult);
 						break;
-				case EPhysicalSurface::SurfaceType2:
-					UE_LOG(LogTemp, Warning, TEXT("Hit Metal Surface!"));
+
+					case EPhysicalSurface::SurfaceType2:
+						// Metal surface
+						UE_LOG(LogTemp, Warning, TEXT("Hit Metal Surface!"));
+						// Make sparks and shit
 						break;
 				}
 			}
 		}
 	}
 
+	void AChimeCharacter::StickToSurface(FHitResult hitResult)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Poke into surface"));
+
+		FVector HitLocation = hitResult.Location;
+
+		CurrentContextAction = EContextAction::ECS_Poking;
+
+		GetCharacterMovement()->DisableMovement();
+		GetCharacterMovement()->GravityScale = 0;
+		GetCharacterMovement()->StopActiveMovement();
+		this->AttachToActor(hitResult.GetActor(), FAttachmentTransformRules::KeepWorldTransform);
+	}
+
+	void AChimeCharacter::StartDragObject(FHitResult hitResult)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Pickup object"));
+	}
 #pragma endregion
 
 #pragma region Physics
