@@ -8,6 +8,7 @@
 class USpringArmComponent;
 class UCameraComponent;
 class UInputAction;
+class UPhysicsHandleComponent;
 struct FInputActionValue;
 
 UCLASS(abstract)
@@ -22,6 +23,10 @@ class AChimeCharacter : public ACharacter
 	/** Follow camera */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
 	UCameraComponent* FollowCamera;
+
+	/** Beak physics handle for dragging objects*/
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
+	UPhysicsHandleComponent* BeakPhysicsHandle;
 
 // -- System vars -- 
 private:
@@ -155,13 +160,15 @@ protected:
 
 	void DoGroundPound();
 
-	void TryContextAction();
+	void TryContextAction(FVector traceDirection);
 
 	void StickToSurface(FHitResult hitResult);
 
 	void UnstickFromSurface();
 
 	void StartDragObject(FHitResult hitResult);
+
+	void DropDraggedObject();
 
 public:
 

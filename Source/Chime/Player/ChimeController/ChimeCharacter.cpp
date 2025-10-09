@@ -9,6 +9,7 @@
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
 #include <Kismet/KismetMathLibrary.h>
+#include "PhysicsEngine/PhysicsHandleComponent.h"
 #include "Managers/GameManager.h"
 #include "DrawDebugHelpers.h"
 
@@ -54,7 +55,7 @@ const int kGroundPoundImpulse = 1800;
 const float kGroundPoundInputBuffer = 0.15f;
 
 // -- Context Action --
-const float kPokeTraceDistance = 170.0f;
+const float kPokeTraceDistance = 130.0f;
 
 #pragma endregion
 
@@ -70,6 +71,9 @@ AChimeCharacter::AChimeCharacter()
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
 	FollowCamera->bUsePawnControlRotation = false;
+
+	// Physics handle
+	BeakPhysicsHandle = CreateDefaultSubobject<UPhysicsHandleComponent>(TEXT("BeakPhysicsHandle"));
 
 	// Don't rotate when the controller rotates. Let that just affect the camera.
 	bUseControllerRotationPitch = false;
@@ -187,6 +191,10 @@ void AChimeCharacter::BeginPlay()
 		Super::Landed(Hit);
 
 		bHasDoubleJumped = false;
+
+		if (bIsGroundPounding)
+			TryContextAction(FVector::DownVector);
+
 		bIsGroundPounding = false;
 		bIsGliding = false;
 	}
@@ -292,20 +300,12 @@ void AChimeCharacter::BeginPlay()
 		if (bIsInputRestricted || bIsWallJumping || bIsGroundPounding)
 			return;
 
-		TryContextAction();
+		TryContextAction(GetActorForwardVector());
 	}
 
 	void AChimeCharacter::DoContextEnd()
 	{
 		isActionPressed = false;
-
-		if (CurrentContextAction == EContextAction::ECS_Poking) 
-		{
-			UnstickFromSurface();
-		}
-
-		// Reset
-		CurrentContextAction = EContextAction::ECS_None;
 	}
 #pragma endregion
 
@@ -324,6 +324,18 @@ void AChimeCharacter::BeginPlay()
 
 		// Handle velocity clamping
 		HandleVelocity();
+
+		if (CurrentContextAction == EContextAction::ECS_Dragging) 
+		{
+			if (BeakPhysicsHandle && BeakPhysicsHandle->GrabbedComponent)
+			{
+				// Calculate a target location and rotation based on your character's view
+				FVector TargetLocation = GetActorLocation() + GetActorForwardVector() * 100.0f;
+				FRotator TargetRotation = GetControlRotation();
+
+				BeakPhysicsHandle->SetTargetLocationAndRotation(TargetLocation, TargetRotation);
+			}
+		}
 	}
 
 #pragma endregion
@@ -478,10 +490,10 @@ void AChimeCharacter::BeginPlay()
 		UE_LOG(LogTemp, Warning, TEXT("Ground pound"));
 	}
 
-	void AChimeCharacter::TryContextAction() 
+	void AChimeCharacter::TryContextAction(FVector traceDirection) 
 	{
 		FVector traceStart = GetActorLocation();
-		const FVector traceEnd = traceStart + (GetActorForwardVector() * kPokeTraceDistance);
+		const FVector traceEnd = traceStart + (traceDirection * kPokeTraceDistance);
 
 		FHitResult hitResult;
 		FCollisionQueryParams QueryParams;
@@ -508,28 +520,40 @@ void AChimeCharacter::BeginPlay()
 			2.0f
 		);
 
-		if (bIsActorHit)
+		// Try to undo current context state if possible
+		switch (CurrentContextAction)
 		{
-			if (IsValid(hitResult.PhysMaterial.Get()))
+			case EContextAction::ECS_Poking:
+				UnstickFromSurface();
+				return;
+
+			case EContextAction::ECS_Dragging:
+				// Drop object
+				return;
+		}
+
+		if (bIsActorHit && IsValid(hitResult.PhysMaterial.Get()))
+		{
+			EPhysicalSurface SurfaceType = UPhysicalMaterial::DetermineSurfaceType(hitResult.PhysMaterial.Get());
+
+			switch (SurfaceType)
 			{
-				EPhysicalSurface SurfaceType = UPhysicalMaterial::DetermineSurfaceType(hitResult.PhysMaterial.Get());
-
-				switch (SurfaceType)
-				{
-					case EPhysicalSurface::SurfaceType1:
-						// Soft surface
-						if (hitResult.GetComponent()->IsSimulatingPhysics())
+				case EPhysicalSurface::SurfaceType1:
+					// Soft surface
+					if (hitResult.GetComponent()->IsSimulatingPhysics()) 
+					{
+						// Pickup soft rigidbodies
+						if (!bIsGroundPounding)
 							StartDragObject(hitResult);
-						else
-							StickToSurface(hitResult);
-						break;
+					}
+					else
+						// Stick into soft solid surfaces (even when ground pounding)
+						StickToSurface(hitResult);
+					break;
 
-					case EPhysicalSurface::SurfaceType2:
-						// Metal surface
-						UE_LOG(LogTemp, Warning, TEXT("Hit Metal Surface!"));
-						// Make sparks and shit
-						break;
-				}
+				case EPhysicalSurface::SurfaceType2:
+					// Make sparks and shit
+					break;
 			}
 		}
 	}
@@ -537,6 +561,7 @@ void AChimeCharacter::BeginPlay()
 	void AChimeCharacter::StickToSurface(FHitResult hitResult)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Poke into surface"));
+		CurrentContextAction = EContextAction::ECS_Poking;
 
 		FVector WallNormal = hitResult.ImpactNormal;
 
@@ -550,8 +575,7 @@ void AChimeCharacter::BeginPlay()
 		FVector newLocation = hitLocation + (WallNormal * GetCapsuleComponent()->GetUnscaledCapsuleRadius());
 		SetActorLocation(newLocation);
 
-		CurrentContextAction = EContextAction::ECS_Poking;
-
+		// Follow surface transfrom
 		GetCharacterMovement()->DisableMovement();
 		GetCharacterMovement()->GravityScale = 0;
 		GetCharacterMovement()->StopActiveMovement();
@@ -563,11 +587,34 @@ void AChimeCharacter::BeginPlay()
 		GetCharacterMovement()->SetMovementMode(MOVE_Walking);
 		GetCharacterMovement()->GravityScale = kDefaultGravityScale;
 		this->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+
+		CurrentContextAction = EContextAction::ECS_None;
 	}
 
 	void AChimeCharacter::StartDragObject(FHitResult hitResult)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Pickup object"));
+		CurrentContextAction = EContextAction::ECS_Dragging;
+
+		UPrimitiveComponent* HitComp = hitResult.GetComponent();
+		if (HitComp && HitComp->IsSimulatingPhysics())
+		{
+			BeakPhysicsHandle->GrabComponentAtLocationWithRotation(
+				HitComp,
+				NAME_None,
+				hitResult.ImpactPoint,
+				HitComp->GetComponentRotation()
+			);
+		}
+	}
+
+	void AChimeCharacter::DropDraggedObject()
+	{
+		if (BeakPhysicsHandle && BeakPhysicsHandle->GrabbedComponent)
+		{
+			BeakPhysicsHandle->ReleaseComponent();
+		}
+
+		CurrentContextAction = EContextAction::ECS_None;
 	}
 #pragma endregion
 
