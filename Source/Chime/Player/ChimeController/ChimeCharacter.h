@@ -28,6 +28,10 @@ class AChimeCharacter : public ACharacter
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
 	UPhysicsHandleComponent* BeakPhysicsHandle;
 
+	/** Physics handle location*/
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
+	USceneComponent* BeakComponent;
+
 // -- System vars -- 
 private:
 

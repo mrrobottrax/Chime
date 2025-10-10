@@ -74,6 +74,7 @@ AChimeCharacter::AChimeCharacter()
 
 	// Physics handle
 	BeakPhysicsHandle = CreateDefaultSubobject<UPhysicsHandleComponent>(TEXT("BeakPhysicsHandle"));
+	BeakComponent = CreateDefaultSubobject<USceneComponent>(TEXT("BeakComponent"));
 
 	// Don't rotate when the controller rotates. Let that just affect the camera.
 	bUseControllerRotationPitch = false;
@@ -329,11 +330,10 @@ void AChimeCharacter::BeginPlay()
 		{
 			if (BeakPhysicsHandle && BeakPhysicsHandle->GrabbedComponent)
 			{
-				// Calculate a target location and rotation based on your character's view
-				FVector TargetLocation = GetActorLocation() + GetActorForwardVector() * 100.0f;
-				FRotator TargetRotation = GetControlRotation();
-
-				BeakPhysicsHandle->SetTargetLocationAndRotation(TargetLocation, TargetRotation);
+				// Snap the object to the beak
+				FVector BeakLoc = BeakComponent->GetComponentLocation();
+				FRotator BeakRot = BeakComponent->GetComponentRotation();
+				BeakPhysicsHandle->SetTargetLocationAndRotation(BeakLoc, BeakRot);
 			}
 		}
 	}
@@ -604,6 +604,11 @@ void AChimeCharacter::BeginPlay()
 				hitResult.ImpactPoint,
 				HitComp->GetComponentRotation()
 			);
+
+			// Snap the object to the beak
+			FVector BeakLoc = BeakComponent->GetComponentLocation();
+			FRotator BeakRot = BeakComponent->GetComponentRotation();
+			BeakPhysicsHandle->SetTargetLocationAndRotation(BeakLoc, BeakRot);
 		}
 	}
 
