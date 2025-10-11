@@ -11,6 +11,7 @@
 #include <Kismet/KismetMathLibrary.h>
 #include "PhysicsEngine/PhysicsHandleComponent.h"
 #include "Managers/GameManager.h"
+#include "InteractionBase/InteractionBase_Component.h"
 #include "DrawDebugHelpers.h"
 
 #pragma region Movement Constants
@@ -76,6 +77,10 @@ AChimeCharacter::AChimeCharacter()
 	BeakPhysicsHandle = CreateDefaultSubobject<UPhysicsHandleComponent>(TEXT("BeakPhysicsHandle"));
 	BeakComponent = CreateDefaultSubobject<USceneComponent>(TEXT("BeakComponent"));
 	BeakComponent->SetupAttachment(RootComponent);
+
+	// Bind overlaps
+	GetCapsuleComponent()->OnComponentBeginOverlap.AddDynamic(this, &AChimeCharacter::OnCharacterOverlap);
+	GetCapsuleComponent()->OnComponentEndOverlap.AddDynamic(this, &AChimeCharacter::OnCharacterEndOverlap);
 
 	// Don't rotate when the controller rotates. Let that just affect the camera.
 	bUseControllerRotationPitch = false;
@@ -308,6 +313,11 @@ void AChimeCharacter::BeginPlay()
 	void AChimeCharacter::DoContextEnd()
 	{
 		isActionPressed = false;
+	}
+
+	void AChimeCharacter::DoGearDriver(float xDir)
+	{
+
 	}
 #pragma endregion
 
@@ -721,6 +731,30 @@ void AChimeCharacter::BeginPlay()
 				Vel.Z = kMaxGlideZVel;
 				GetCharacterMovement()->Velocity = Vel;
 			}
+		}
+	}
+
+	void AChimeCharacter::OnCharacterOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+	{
+		UInteractionBase_Component *pInteractionBaseComponent = OtherActor->GetComponentByClass<UInteractionBase_Component>();
+		if (IsValid(pInteractionBaseComponent))
+		{
+			CurrentInteractionBase = pInteractionBaseComponent;
+
+			// Add your desired logic here when an overlap occurs
+			UE_LOG(LogTemp, Warning, TEXT("Character overlapped with: %s"), *CurrentInteractionBase->GetName());
+		}
+
+	}
+
+	void AChimeCharacter::OnCharacterEndOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
+	{
+		UInteractionBase_Component* pInteractionBaseComponent = OtherActor->GetComponentByClass<UInteractionBase_Component>();
+		if (IsValid(CurrentInteractionBase) && CurrentInteractionBase == pInteractionBaseComponent)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Character overlapped with: %s"), *CurrentInteractionBase->GetName());
+			CurrentInteractionBase = nullptr;
+			UE_LOG(LogTemp, Warning, TEXT("NULLLLLLLLLLLLLL<"));
 		}
 	}
 

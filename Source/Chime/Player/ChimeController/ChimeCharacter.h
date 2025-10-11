@@ -9,6 +9,7 @@ class USpringArmComponent;
 class UCameraComponent;
 class UInputAction;
 class UPhysicsHandleComponent;
+class UInteractionBase_Component;
 struct FInputActionValue;
 
 UCLASS(abstract)
@@ -65,7 +66,8 @@ private:
 	{
 		ECS_None UMETA(DisplayName = "None"),
 		ECS_Poking UMETA(DisplayName = "Poking"),
-		ECS_Dragging UMETA(DisplayName = "Dragging")
+		ECS_Dragging UMETA(DisplayName = "Dragging"),
+		ECS_ControllingGear UMETA(DisplayName = "ControllingGear")
 	};
 	EContextAction CurrentContextAction;
 
@@ -74,6 +76,9 @@ public:
 	bool bIsGliding = false;
 	bool bIsInWind = false;
 	AWindZone* CurrentWindZone = nullptr;
+
+	// -- Intercation --
+	UInteractionBase_Component* CurrentInteractionBase = nullptr;
 
 // Constructor
 public:
@@ -87,6 +92,12 @@ protected:
 	virtual void Tick(float DeltaTime) override;
 
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
+	UFUNCTION()
+	void OnCharacterOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+
+	UFUNCTION()
+	void OnCharacterEndOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 
 // Input Actions
 protected:
@@ -113,6 +124,10 @@ protected:
 	/** Context Input Action */
 	UPROPERTY(EditAnywhere, Category = "Input")
 	UInputAction* ContextAction;
+
+	/** Gear Input Action */
+	UPROPERTY(EditAnywhere, Category = "Input")
+	UInputAction* GearAction;
 
 // Input handlers
 public:
@@ -144,6 +159,10 @@ public:
 	/** Handles context defined inputs */
 	UFUNCTION(BlueprintCallable, Category = "Input")
 	virtual void DoContextEnd();
+
+	/** Handles gear control when in gear mode */
+	UFUNCTION(BlueprintCallable, Category = "Input")
+	virtual void DoGearDriver(float xDir);
 
 // Actions
 protected:
