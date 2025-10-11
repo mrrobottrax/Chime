@@ -75,6 +75,7 @@ AChimeCharacter::AChimeCharacter()
 	// Physics handle
 	BeakPhysicsHandle = CreateDefaultSubobject<UPhysicsHandleComponent>(TEXT("BeakPhysicsHandle"));
 	BeakComponent = CreateDefaultSubobject<USceneComponent>(TEXT("BeakComponent"));
+	BeakComponent->SetupAttachment(RootComponent);
 
 	// Don't rotate when the controller rotates. Let that just affect the camera.
 	bUseControllerRotationPitch = false;
@@ -528,7 +529,7 @@ void AChimeCharacter::BeginPlay()
 				return;
 
 			case EContextAction::ECS_Dragging:
-				// Drop object
+				DropDraggedObject();
 				return;
 		}
 
