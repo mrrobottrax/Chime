@@ -3,13 +3,13 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Chime/LevelTools/WindVolume/WindZone.h"
+#include "Chime/LevelTools/InteractableBase/InteractableBase.h"
 #include "ChimeCharacter.generated.h"
 
 class USpringArmComponent;
 class UCameraComponent;
 class UInputAction;
 class UPhysicsHandleComponent;
-class UInteractionBase_Component;
 struct FInputActionValue;
 
 UCLASS(abstract)
@@ -77,8 +77,8 @@ public:
 	bool bIsInWind = false;
 	AWindZone* CurrentWindZone = nullptr;
 
-	// -- Intercation --
-	UInteractionBase_Component* CurrentInteractionBase = nullptr;
+	// -- Interaction --
+	AInteractableBase* CurrentInteractable = nullptr;
 
 // Constructor
 public:
@@ -125,6 +125,10 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Input")
 	UInputAction* ContextAction;
 
+	/** Interactable Input Action */
+	UPROPERTY(EditAnywhere, Category = "Input")
+	UInputAction* UseInteractable;
+
 	/** Gear Input Action */
 	UPROPERTY(EditAnywhere, Category = "Input")
 	UInputAction* GearAction;
@@ -160,9 +164,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Input")
 	virtual void DoContextEnd();
 
+	/** Handles context defined inputs */
+	UFUNCTION(BlueprintCallable, Category = "Input")
+	virtual void DoUseInteractableStart();
+
 	/** Handles gear control when in gear mode */
 	UFUNCTION(BlueprintCallable, Category = "Input")
-	virtual void DoGearDriver(float xDir);
+	virtual void DoGearDriver(const FInputActionValue& Value);
 
 // Actions
 protected:

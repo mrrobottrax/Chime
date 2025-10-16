@@ -11,7 +11,7 @@
 #include <Kismet/KismetMathLibrary.h>
 #include "PhysicsEngine/PhysicsHandleComponent.h"
 #include "Managers/GameManager.h"
-#include "InteractionBase/InteractionBase_Component.h"
+#include "Chime/LevelTools/InteractableBase/InteractableBase.h"
 #include "DrawDebugHelpers.h"
 
 #pragma region Movement Constants
@@ -158,6 +158,10 @@ void AChimeCharacter::BeginPlay()
 			// Context-ing?
 			EnhancedInputComponent->BindAction(ContextAction, ETriggerEvent::Started, this, &AChimeCharacter::DoContextStart);
 			EnhancedInputComponent->BindAction(ContextAction, ETriggerEvent::Completed, this, &AChimeCharacter::DoContextEnd);
+
+			EnhancedInputComponent->BindAction(UseInteractable, ETriggerEvent::Started, this, &AChimeCharacter::DoUseInteractableStart);
+
+			EnhancedInputComponent->BindAction(GearAction, ETriggerEvent::Started, this, &AChimeCharacter::DoGearDriver);
 		}
 	}
 
@@ -315,9 +319,28 @@ void AChimeCharacter::BeginPlay()
 		isActionPressed = false;
 	}
 
-	void AChimeCharacter::DoGearDriver(float xDir)
+	void AChimeCharacter::DoUseInteractableStart()
 	{
+		UE_LOG(LogTemp, Warning, TEXT("Try Interaction"));
 
+		// Exit gear control mode
+		if (CurrentContextAction == EContextAction::ECS_ControllingGear) 
+		{
+			CurrentContextAction = EContextAction::ECS_None;
+			return;
+		}
+
+		// Enter gear control mode
+		if (IsValid((AActor*)CurrentInteractable))
+		{
+			CurrentContextAction = EContextAction::ECS_ControllingGear;
+			UE_LOG(LogTemp, Warning, TEXT("Working"));
+		}
+	}
+
+	void AChimeCharacter::DoGearDriver(const FInputActionValue& Value)
+	{
+		// Gears!!!
 	}
 #pragma endregion
 
@@ -736,25 +759,22 @@ void AChimeCharacter::BeginPlay()
 
 	void AChimeCharacter::OnCharacterOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 	{
-		UInteractionBase_Component *pInteractionBaseComponent = OtherActor->GetComponentByClass<UInteractionBase_Component>();
-		if (IsValid(pInteractionBaseComponent))
-		{
-			CurrentInteractionBase = pInteractionBaseComponent;
+		//UE_LOG(LogTemp, Warning, TEXT("Character overlapped with: %s"), *CurrentInteractionBase->GetName());
 
-			// Add your desired logic here when an overlap occurs
-			UE_LOG(LogTemp, Warning, TEXT("Character overlapped with: %s"), *CurrentInteractionBase->GetName());
+		if (IsValid(OtherActor) && OtherActor->GetAttachParentActor()->IsA<AInteractableBase>())
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Entered interactable trigger"));
+			CurrentInteractable = (AInteractableBase*)OtherActor->GetAttachParentActor();
 		}
 
 	}
 
 	void AChimeCharacter::OnCharacterEndOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 	{
-		UInteractionBase_Component* pInteractionBaseComponent = OtherActor->GetComponentByClass<UInteractionBase_Component>();
-		if (IsValid(CurrentInteractionBase) && CurrentInteractionBase == pInteractionBaseComponent)
+		if (IsValid(OtherActor) && (AInteractableBase*)OtherActor->GetAttachParentActor() == CurrentInteractable)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("Character overlapped with: %s"), *CurrentInteractionBase->GetName());
-			CurrentInteractionBase = nullptr;
-			UE_LOG(LogTemp, Warning, TEXT("NULLLLLLLLLLLLLL<"));
+			CurrentInteractable = nullptr;
+			UE_LOG(LogTemp, Warning, TEXT("Exited interactable trigger"));
 		}
 	}
 
