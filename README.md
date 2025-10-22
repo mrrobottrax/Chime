@@ -63,10 +63,43 @@ The second factory implementation, the “prop dropper”, is used to dynamicall
 ```mermaid
 flowchart TD
     A[Spawn Event Triggered]:::event --> B[BP_DynamicObjectSpawner]:::spawner
-    B -->|Takes Transform + Class| C[SpawnActor]
+    B -->|Passes Transform + Class| C[SpawnActor]
     C --> D[Prop Appears]
     D -->|Falls To Ground| E[Used in Gameplay]
 
     classDef event fill:#27ae60,stroke:#145a32,stroke-width:2px,color:#fff
     classDef spawner fill:#4a90e2,stroke:#2c3e50,stroke-width:2px,color:#fff
+```
+
+## Observer
+For the observer design pattern, our project has two main implementations, which are trigger zones, which trigger various events upon entry, and UI reactions, which change the UI during a specific event, which in our scenario is the player death.
+
+Our first implementation, trigger zones, is used to control multiple events within our project, such as checkpoints and player death zones. These work by leveraging Unreal’s trigger boxes, and having the blueprints observe the trigger box for overlap. When the trigger box detects that a specific actor has entered the zone, such as the player, the “ActorBeginOverlap” event is run in the given blueprint, either “BP_Checkpoint” or “BP_DeathZone”, which then goes through their respective functions. This implementation is easily expandable, as the zones could be set up to do virtually anything, since the zones will still trigger in the same way regardless of what runs within the “ActorBeginOverlap” event.
+
+```mermaid
+flowchart TD
+    A[Trigger Box]:::trigger -->|Observed For Overlap| B[Blueprint Observer]
+    B -->|Detects Actor Entered| C[ActorBeginOverlap Event]
+
+    C -->|Runs In| D[BP_Checkpoint]
+    C -->|Runs In| E[BP_DeathZone]
+
+    D --> F[Checkpoint Saved]
+    E --> G[Player Dies]
+
+    classDef trigger fill:#4a90e2,stroke:#2c3e50,stroke-width:2px,color:#fff
+```
+The second implementation, UI death reactions, is used to shake the camera when the player dies, adding a bit of dramatic effect on death. This implementation works by having the “PlayerCameraComponent” script observe the death delegate in the “PlayerHealth” script. On death, the health script broadcasts the delegate, which in turn triggers the camera shaking function within the player camera script, causing the screen to shake around. Since the health script broadcasts the delegate on death, it can easily be used to trigger other functions within the game, leading to additional effects being added with little difficulty.
+
+```mermaid
+flowchart TD
+    A[Player Dies]:::event --> B[PlayerHealth Script]:::health
+    B --> C[Broadcasts Death Delegate]
+    C -->|Observed By| D[PlayerCameraComponent]:::camera
+    D -->|Triggers| E[Camera Shake Function]
+    E --> F[Screen Shake Effect]
+
+    classDef event fill:#e74c3c,stroke:#922b21,stroke-width:2px,color:#fff
+    classDef health fill:#4a90e2,stroke:#2c3e50,stroke-width:2px,color:#fff
+    classDef camera fill:#f39c12,stroke:#d35400,stroke-width:2px,color:#fff
 ```
