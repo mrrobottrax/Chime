@@ -7,7 +7,7 @@
 #include "ChimeCharacter.generated.h"
 
 class USpringArmComponent;
-class UCameraComponent;
+class UPlayerCameraComponent;
 class UInputAction;
 class UPhysicsHandleComponent;
 struct FInputActionValue;
@@ -23,7 +23,7 @@ class AChimeCharacter : public ACharacter
 
 	/** Follow camera */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
-	UCameraComponent* FollowCamera;
+	UPlayerCameraComponent* PlayerCamera;
 
 	/** Beak physics handle for dragging objects*/
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
@@ -237,5 +237,5 @@ public:
 
 	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
 
-	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
+	FORCEINLINE class UPlayerCameraComponent* GetFollowCamera() const { return PlayerCamera; }
 };

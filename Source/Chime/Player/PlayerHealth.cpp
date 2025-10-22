@@ -36,6 +36,8 @@ void UPlayerHealth::Die()
 {
 	bIsDead = true;
 
-	// Move this elsewhere later when we have UI or some shit
+	// Broadcast death delegate
+	OnDeath.Broadcast();
+
 	Respawn();
 }

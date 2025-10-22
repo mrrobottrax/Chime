@@ -12,6 +12,7 @@
 #include "PhysicsEngine/PhysicsHandleComponent.h"
 #include "Managers/GameManager.h"
 #include "Chime/LevelTools/InteractableBase/InteractableBase.h"
+#include "Chime/Player/ChimeController/PlayerCameraComponent.h"
 #include "DrawDebugHelpers.h"
 
 #pragma region Movement Constants
@@ -69,9 +70,9 @@ AChimeCharacter::AChimeCharacter()
 	CameraBoom->bUsePawnControlRotation = true;
 
 	// Create a follow camera
-	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
-	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
-	FollowCamera->bUsePawnControlRotation = false;
+	PlayerCamera = CreateDefaultSubobject<UPlayerCameraComponent>(TEXT("PlayerCamera"));
+	PlayerCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
+	PlayerCamera->bUsePawnControlRotation = false;
 
 	// Physics handle
 	BeakPhysicsHandle = CreateDefaultSubobject<UPhysicsHandleComponent>(TEXT("BeakPhysicsHandle"));

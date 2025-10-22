@@ -14,10 +14,15 @@ public:
 	// Constructor
 	UPlayerHealth();
 
+	UFUNCTION(BlueprintCallable, Category = "PlayerState")
 	void Respawn();
 
 	UFUNCTION(BlueprintCallable, Category = "PlayerState")
 	void Die();
+
+	// Public delegates
+	DECLARE_MULTICAST_DELEGATE(FOnDeath);
+	FOnDeath OnDeath;
 
 protected:
 	virtual void BeginPlay() override;
