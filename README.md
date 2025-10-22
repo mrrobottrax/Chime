@@ -37,3 +37,25 @@ flowchart TD
     classDef death fill:#e74c3c,stroke:#922b21,stroke-width:2px,color:#fff
 ```
 Having it centralized this way means that there are far less variables to keep track of as opposed to each script containing duplicate variables, or making multiple calls to other scripts to get commonly used values, leading to “spaghetti code”. This streamlines development by keeping the codebase streamlined, comprehensive, and predictable.
+
+## Factory
+In terms of the factory design pattern, our project has two implementations in the form of a zone UI generator, which can dynamically create zone-dependent UI elements, and a “prop dropper”, which can spawn various props in our game by dropping them in from above.
+
+The zone UI factory implementation leverages Unreal Engine’s User Widgets to generate UI elements on the screen, regardless of the specifics of the UI. This works by having a widget blueprint for a given UI layer, such as HUD, which then has a stack that stores all the UI elements in that layer. When a player enters a new area, it runs a function in that area’s blueprint - BP_LevelArea - that clears all the elements of the stack in its layer. It then passes its UI class to the UI factory method, which then creates a widget based on the class passed to it, and outputs it onto the screen. This allows for easy expansion in future development, by allowing new zone UI to be created with a single function call, regardless of the specifics of that element. This greatly streamlines the level creation process, reduces redundant UI type checks in the code, and removes the headache of creating new zone UI types in the future.
+
+
+```mermaid
+flowchart TD
+    A[Widget Blueprint]:::widget -->|Contains| B[UI Stack]
+    B -->|Stores| C[UI Elements]
+
+    D[Player Enters New Area]:::event --> E[BP_LevelArea]
+    E -->|Clears| B
+    E -->|Passes UI Class| F[UI Factory Method]
+    F -->|Creates Widget From Class| G[User Widget]
+    G -->|Outputs To| H[Screen]:::screen
+
+    classDef widget fill:#4a90e2,stroke:#2c3e50,stroke-width:2px,color:#fff
+    classDef event fill:#27ae60,stroke:#145a32,stroke-width:2px,color:#fff
+    classDef screen fill:#6bc9ff,stroke:#4785a8,stroke-width:2px,color:#fff
+```
