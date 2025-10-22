@@ -36,7 +36,22 @@ flowchart TD
     classDef checkpoint fill:#f39c12,stroke:#d35400,stroke-width:2px,color:#fff
     classDef death fill:#e74c3c,stroke:#922b21,stroke-width:2px,color:#fff
 ```
-Having it centralized this way means that there are far less variables to keep track of as opposed to each script containing duplicate variables, or making multiple calls to other scripts to get commonly used values, leading to “spaghetti code”. This streamlines development by keeping the codebase streamlined, comprehensive, and predictable.
+The second implementation in our project is the UI manager. This seemed like the next most important one to implement, as our game doesn’t have a health system or combat. The UI manager allows for centralized control for UI elements, by keeping track of the elements within specific layers of the UI by storing them in a stack, allowing for easy clearing of a given layer by blueprints that need to update the UI on the layer. When a blueprint goes to update the UI on a layer, it gets the widget blueprint for that layer, clears its widget stack, then creates new UI widgets, which are placed in the newly cleared layer widget stack. This means that the respective widget stacks can easily be modified by any UI blueprint, as it is all centralized within the UI manager, resulting in easy per-layer UI additions during development.
+
+```mermaid
+flowchart TD
+    A[UI Manager]:::manager --> B[Layer Widget Blueprint]
+    B -->|Stores| C[UI Widgets]
+
+    E[UI Blueprint]:::blueprint
+    E -->|1. Clears| C
+    E -->|2. Creates| D[UI Elements]
+    D -->|Placed Into| C
+
+    classDef manager fill:#4a90e2,stroke:#2c3e50,stroke-width:2px,color:#fff
+    classDef blueprint fill:#f39c12,stroke:#d35400,stroke-width:2px,color:#fff
+```
+Having these centralized this way means that there are far less variables to keep track of as opposed to each script containing duplicate variables, or making multiple calls to other scripts to get commonly used values, leading to “spaghetti code”. This streamlines development by keeping the codebase clean, comprehensive, and predictable.
 
 ## Factory
 In terms of the factory design pattern, our project has two implementations in the form of a zone UI generator, which can dynamically create zone-dependent UI elements, and a “prop dropper”, which can spawn various props in our game by dropping them in from above.
