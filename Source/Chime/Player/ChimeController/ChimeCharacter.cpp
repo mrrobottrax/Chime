@@ -759,19 +759,25 @@ void AChimeCharacter::BeginPlay()
 
 	void AChimeCharacter::OnCharacterOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 	{
-		//UE_LOG(LogTemp, Warning, TEXT("Character overlapped with: %s"), *CurrentInteractionBase->GetName());
+		if (!IsValid(OtherActor))
+			return;
 
-		if (IsValid(OtherActor) && OtherActor->GetAttachParentActor()->IsA<AInteractableBase>())
+		AActor* ParentActor = OtherActor->GetAttachParentActor();
+		if (IsValid(ParentActor) && ParentActor->IsA<AInteractableBase>())
 		{
 			UE_LOG(LogTemp, Warning, TEXT("Entered interactable trigger"));
-			CurrentInteractable = (AInteractableBase*)OtherActor->GetAttachParentActor();
+			CurrentInteractable = Cast<AInteractableBase>(ParentActor);
 		}
 
 	}
 
 	void AChimeCharacter::OnCharacterEndOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 	{
-		if (IsValid(OtherActor) && (AInteractableBase*)OtherActor->GetAttachParentActor() == CurrentInteractable)
+		if (!IsValid(OtherActor))
+			return;
+
+		AActor* ParentActor = OtherActor->GetAttachParentActor();
+		if (IsValid(ParentActor) && ParentActor == CurrentInteractable)
 		{
 			CurrentInteractable = nullptr;
 			UE_LOG(LogTemp, Warning, TEXT("Exited interactable trigger"));
