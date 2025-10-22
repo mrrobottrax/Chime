@@ -64,9 +64,10 @@ flowchart TD
     B -->|Stores| C[UI Elements]
 
     D[Player Enters New Area]:::event --> E[BP_LevelArea]
-    E -->|Clears| B
-    E -->|Passes UI Class| F[UI Factory Method]
+    E -->|1. Clears| B
+    E -->|2. Passes UI Class| F[UI Factory Method]
     F -->|Creates Widget From Class| G[User Widget]
+    G--> |Stores In| B
     G -->|Outputs To| H[Screen]:::screen
 
     classDef widget fill:#4a90e2,stroke:#2c3e50,stroke-width:2px,color:#fff
