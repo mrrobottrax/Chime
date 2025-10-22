@@ -12,7 +12,7 @@
 #include "PhysicsEngine/PhysicsHandleComponent.h"
 #include "Managers/GameManager.h"
 #include "Chime/LevelTools/InteractableBase/InteractableBase.h"
-#include "Chime/Player/ChimeController/PlayerCameraComponent.h"
+#include "Chime/Player/ChimeCamera/PlayerCameraComponent.h"
 #include "DrawDebugHelpers.h"
 
 #pragma region Movement Constants
