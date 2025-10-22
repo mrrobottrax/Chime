@@ -43,7 +43,6 @@ In terms of the factory design pattern, our project has two implementations in t
 
 The zone UI factory implementation leverages Unreal Engine’s User Widgets to generate UI elements on the screen, regardless of the specifics of the UI. This works by having a widget blueprint for a given UI layer, such as HUD, which then has a stack that stores all the UI elements in that layer. When a player enters a new area, it runs a function in that area’s blueprint - BP_LevelArea - that clears all the elements of the stack in its layer. It then passes its UI class to the UI factory method, which then creates a widget based on the class passed to it, and outputs it onto the screen. This allows for easy expansion in future development, by allowing new zone UI to be created with a single function call, regardless of the specifics of that element. This greatly streamlines the level creation process, reduces redundant UI type checks in the code, and removes the headache of creating new zone UI types in the future.
 
-
 ```mermaid
 flowchart TD
     A[Widget Blueprint]:::widget -->|Contains| B[UI Stack]
@@ -58,4 +57,16 @@ flowchart TD
     classDef widget fill:#4a90e2,stroke:#2c3e50,stroke-width:2px,color:#fff
     classDef event fill:#27ae60,stroke:#145a32,stroke-width:2px,color:#fff
     classDef screen fill:#6bc9ff,stroke:#4785a8,stroke-width:2px,color:#fff
+```
+The second factory implementation, the “prop dropper”, is used to dynamically spawn a given prop in a specific position. In terms of gameplay, this could be something like spawning a gear overhead upon entering a level, which then falls to the ground, and is then used to solve a puzzle. This implementation works by using the blueprint “BP_DynamicObjectSpawner”, which takes the specified transform and object class, and spawns in an actor of that class at the transform. This means that any prop actor class, such as a screw or gear, can be spawned at a specified transform, without needing actor-specific spawn scripts. This, much like the other implementation, means that future development, especially level design, will be more streamlined, and not require the creation of new spawners for every new prop type created.
+
+```mermaid
+flowchart TD
+    A[Spawn Event Triggered]:::event --> B[BP_DynamicObjectSpawner]:::spawner
+    B -->|Takes Transform + Class| C[SpawnActor]
+    C --> D[Prop Appears]
+    D -->|Falls To Ground| E[Used in Gameplay]
+
+    classDef event fill:#27ae60,stroke:#145a32,stroke-width:2px,color:#fff
+    classDef spawner fill:#4a90e2,stroke:#2c3e50,stroke-width:2px,color:#fff
 ```
