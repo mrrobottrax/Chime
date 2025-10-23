@@ -4,6 +4,8 @@
 
 **Contribution: 60%**
 
+I, Ethan Schledewitz-Edwards confirm that my contributions to this project were roughly 60%. I handled the programming and implementation of the features. Additionally, I very lightly supported documentation.
+
 ## **Lucas O'Leary** 100790165 (Documentation/Design) 
 
 **Contribution: 40%**
