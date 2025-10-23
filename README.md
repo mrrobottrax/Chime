@@ -1,9 +1,14 @@
 # Project Progression
 
-**Ethan Schledewitz-Edwards** 100908840
+## **Ethan Schledewitz-Edwards** 100908840 (Programming/Design)
 
-**Lucas O'Leary**
+**Contribution: 60%**
 
+## **Lucas O'Leary** 100790165 (Documentation/Design) 
+
+**Contribution: 40%**
+
+I, Lucas O'Leary, confirm that my contribution to this project is approximately 40%, comprising of the full written documentation of the implemenations, and their supporting flow charts.
 
 ## Group Formation
 When forming our group, we decided to stick to working with other members of our GDW group. This would allow us to contribute to our GDW game, resulting in the time spent working on this project contributing to both this class and the game, rather than having to spend more time working on two separate projects. Working with people from the same GDW team also means that we are already familiar with each other’s strengths and weaknesses, and can efficiently divide up the workload accordingly, as opposed to trying to adapt on the fly.
