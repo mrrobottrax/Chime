@@ -53,6 +53,38 @@ flowchart TD
 ```
 Having these centralized this way means that there are far less variables to keep track of as opposed to each script containing duplicate variables, or making multiple calls to other scripts to get commonly used values, leading to “spaghetti code”. This streamlines development by keeping the codebase clean, comprehensive, and predictable.
 
+## Command
+For the command design pattern, there are two implementations in our project, which are command-based inputs, to allow for easy control binding adjustment, and a console window for text-based command input for testing.
+
+The first command implementation, which is command-based inputs, allows for quick changes to control schemes, as well as support for multiple control schemes at once, such as keyboard and controller. This implementation was done in the form of Unreal’s input action mapping. Each of the controls were given a dedicated action, allowing them to have their individual bindings changed, giving granular control over inputs. It works the same as typical command-based controls, as it listens for specific inputs, then executes a given command, such as jump, when the correct button is pressed. Unreal’s input actions were chosen for this, as they offer a dedicated GUI for editing bindings on actions, which is much quicker when it comes to adjusting bindings during development, especially for those who aren’t programmers.
+
+```mermaid
+flowchart TD
+    A[Input Devices]:::device -->|Keyboard| B[Input Actions]:::mapping
+    A -->|Controller| B
+
+    B --> C[Action]
+
+    C -->|Binding Pressed| E[Command Execution]
+    E -->|Example| F[Player Jumps]
+
+    classDef device fill:#4a90e2,stroke:#2c3e50,stroke-width:2px,color:#fff
+    classDef mapping fill:#f39c12,stroke:#d35400,stroke-width:2px,color:#fff
+```
+The second implementation is the console window, which allows users to execute a given command based on what they enter into the text field. For our scenario, this is used to execute a teleportation command, which will teleport the specified actor to the coordinates entered. This works by taking the input in the field, parsing it into an array, then checking if the first element in the array - the command - is a recognized command. It then takes the remaining elements in the array, and executes the command with them as arguments. For the teleportation command, it would look like “/tp Actor X Y Z”, where it calls the teleportation function, and sends the remaining elements as an array for the function to parse and use. This implementation will greatly speed up play testing, as the user can simply teleport to the desired part of the area without having to repeatedly play through the level to get back to the desired part, which would otherwise waste a lot of development time.
+
+```mermaid
+flowchart TD
+    A[Console Window Text Field]:::input -->|User Enters Command| B[Parse Input Into Array]
+    B -->|First Element = Command| C[Check Command]
+
+    C -->|Valid| D[Set Arguments]
+    C -->|Invalid| E[Invalid Command Message]
+    D -->F[Execute Command]
+
+    classDef input fill:#4a90e2,stroke:#2c3e50,stroke-width:2px,color:#fff
+```
+
 ## Factory
 In terms of the factory design pattern, our project has two implementations in the form of a zone UI generator, which can dynamically create zone-dependent UI elements, and a “prop dropper”, which can spawn various props in our game by dropping them in from above.
 
