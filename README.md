@@ -22,6 +22,21 @@ When forming our group, we decided to stick to working with other members of our
 ## Interactive Media Scenario
 Our interactive media scenario is an extension of our GDW game demo level. This level will utilize all the core mechanics within the game, with an emphasis on the implementations made for this project. As the game is a 3D puzzle platformer that takes place in a grandfather clock, the level will include various clock-related hazards, such as moving platforms, gears, and pitfalls. The level is divided up into smaller sections which focus on a specific mechanic to get through. The level will include UI elements, to showcase the UI-focused implementations, as well as core gameplay elements such as checkpoints and prop spawners to further highlight the implementations made, such as factory and observer. Finally, there will be a toggleable developer console that utilizes commands to trigger events in the scene through text, such as loading a specific checkpoint, or changing game variables, allowing for quicker playtesting and bug fixing.
 
+### Observer & Singleton
+<img width="1225" height="563" alt="Screenshot 2025-10-22 222911" src="https://github.com/user-attachments/assets/3896fdd2-e751-4256-a1c4-6e9222713434" />
+
+### Observer & Singleton
+<img width="1226" height="562" alt="Screenshot 2025-10-22 222938" src="https://github.com/user-attachments/assets/a898282d-c78c-4a31-bbf9-1b2c56fa720c" />
+
+### Factory & Singleton
+<img width="1223" height="574" alt="Screenshot 2025-10-22 222539" src="https://github.com/user-attachments/assets/ae82ebb1-1025-4a7a-aa32-be3a70004370" />
+
+### Factory
+<img width="885" height="551" alt="Screenshot 2025-10-22 222815" src="https://github.com/user-attachments/assets/ed2c0c1e-42ff-4989-b4e5-90d3af8678c3" />
+
+### Command
+<img width="1230" height="569" alt="Screenshot 2025-10-22 222711" src="https://github.com/user-attachments/assets/9bed6551-3eaa-4a57-9a57-965290437a78" />
+
 ## Singleton
 Our project has implemented the singleton design pattern in two forms: a Game Manager, and a UI Manager.
 
