@@ -26,6 +26,7 @@ public:
 	void ExecuteCommandString(const FString& CommandString);
 
 protected:
+	// Trys to find an actor by its name within the world
 	AActor* FindActorByName(UWorld* World, const FString& NameToFind);
 
 private:

@@ -10,8 +10,12 @@ void UCommandManager::Initialize(FSubsystemCollectionBase& Collection)
 
 	// register teleport command
 	RegisterCommand("/tp", UTeleport_Command::StaticClass());
-
 	UE_LOG(LogTemp, Log, TEXT("CommandManager initialized and teleport command registered."));
+
+	// To Do:
+	// Restart Level
+	// Beat level
+	// Spawn Dynamic Object
 }
 
 void UCommandManager::Deinitialize()
@@ -39,17 +43,13 @@ AActor* UCommandManager::FindActorByName(UWorld* World, const FString& NameToFin
 	{
 		if (!Actor) continue;
 
-		// Check ActorLabel first (what you see in editor)
+		// Check ActorLabel first
 		if (Actor->GetActorLabel().Equals(NameToFind, ESearchCase::IgnoreCase))
-		{
 			return Actor;
-		}
 
 		// Fallback: internal name
 		if (Actor->GetName().Contains(NameToFind))
-		{
 			return Actor;
-		}
 	}
 
 	return nullptr;
