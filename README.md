@@ -80,6 +80,8 @@ flowchart TD
 ```
 The second implementation is the console window, which allows users to execute a given command based on what they enter into the text field. For our scenario, this is used to execute a teleportation command, which will teleport the specified actor to the coordinates entered. This works by taking the input in the field, parsing it into an array, then checking if the first element in the array - the command - is a recognized command. It then takes the remaining elements in the array, and executes the command with them as arguments. For the teleportation command, it would look like “/tp Actor X Y Z”, where it calls the teleportation function, and sends the remaining elements as an array for the function to parse and use. This implementation will greatly speed up play testing, as the user can simply teleport to the desired part of the area without having to repeatedly play through the level to get back to the desired part, which would otherwise waste a lot of development time.
 
+The console is toggled using [TAB]
+
 ```mermaid
 flowchart TD
     A[Console Window Text Field]:::input -->|User Enters Command| B[Parse Input Into Array]
