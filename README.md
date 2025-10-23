@@ -1,9 +1,16 @@
 # Project Progression
 
-**Ethan Schledewitz-Edwards** 100908840
+## **Ethan Schledewitz-Edwards** 100908840 (Programming/Design)
 
-**Lucas O'Leary**
+**Contribution: 60%**
 
+I, Ethan Schledewitz-Edwards confirm that my contributions to this project were roughly 60%. I handled the programming and implementation of the features. Additionally, I very lightly supported documentation.
+
+## **Lucas O'Leary** 100790165 (Documentation/Design) 
+
+**Contribution: 40%**
+
+I, Lucas O'Leary, confirm that my contribution to this project is approximately 40%, comprising of the full written documentation of the implemenations, and their supporting flow charts.
 
 ## Group Formation
 When forming our group, we decided to stick to working with other members of our GDW group. This would allow us to contribute to our GDW game, resulting in the time spent working on this project contributing to both this class and the game, rather than having to spend more time working on two separate projects. Working with people from the same GDW team also means that we are already familiar with each other’s strengths and weaknesses, and can efficiently divide up the workload accordingly, as opposed to trying to adapt on the fly.
@@ -14,6 +21,21 @@ When forming our group, we decided to stick to working with other members of our
 
 ## Interactive Media Scenario
 Our interactive media scenario is an extension of our GDW game demo level. This level will utilize all the core mechanics within the game, with an emphasis on the implementations made for this project. As the game is a 3D puzzle platformer that takes place in a grandfather clock, the level will include various clock-related hazards, such as moving platforms, gears, and pitfalls. The level is divided up into smaller sections which focus on a specific mechanic to get through. The level will include UI elements, to showcase the UI-focused implementations, as well as core gameplay elements such as checkpoints and prop spawners to further highlight the implementations made, such as factory and observer. Finally, there will be a toggleable developer console that utilizes commands to trigger events in the scene through text, such as loading a specific checkpoint, or changing game variables, allowing for quicker playtesting and bug fixing.
+
+### Observer & Singleton
+<img width="1225" height="563" alt="Screenshot 2025-10-22 222911" src="https://github.com/user-attachments/assets/3896fdd2-e751-4256-a1c4-6e9222713434" />
+
+### Observer & Singleton
+<img width="1226" height="562" alt="Screenshot 2025-10-22 222938" src="https://github.com/user-attachments/assets/a898282d-c78c-4a31-bbf9-1b2c56fa720c" />
+
+### Factory & Singleton
+<img width="1223" height="574" alt="Screenshot 2025-10-22 222539" src="https://github.com/user-attachments/assets/ae82ebb1-1025-4a7a-aa32-be3a70004370" />
+
+### Factory
+<img width="885" height="551" alt="Screenshot 2025-10-22 222815" src="https://github.com/user-attachments/assets/ed2c0c1e-42ff-4989-b4e5-90d3af8678c3" />
+
+### Command
+<img width="1230" height="569" alt="Screenshot 2025-10-22 222711" src="https://github.com/user-attachments/assets/9bed6551-3eaa-4a57-9a57-965290437a78" />
 
 ## Singleton
 Our project has implemented the singleton design pattern in two forms: a Game Manager, and a UI Manager.
@@ -72,6 +94,8 @@ flowchart TD
     classDef mapping fill:#f39c12,stroke:#d35400,stroke-width:2px,color:#fff
 ```
 The second implementation is the console window, which allows users to execute a given command based on what they enter into the text field. For our scenario, this is used to execute a teleportation command, which will teleport the specified actor to the coordinates entered. This works by taking the input in the field, parsing it into an array, then checking if the first element in the array - the command - is a recognized command. It then takes the remaining elements in the array, and executes the command with them as arguments. For the teleportation command, it would look like “/tp Actor X Y Z”, where it calls the teleportation function, and sends the remaining elements as an array for the function to parse and use. This implementation will greatly speed up play testing, as the user can simply teleport to the desired part of the area without having to repeatedly play through the level to get back to the desired part, which would otherwise waste a lot of development time.
+
+The console is toggled using [TAB]
 
 ```mermaid
 flowchart TD
