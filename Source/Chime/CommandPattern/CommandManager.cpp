@@ -43,11 +43,6 @@ AActor* UCommandManager::FindActorByName(UWorld* World, const FString& NameToFin
 	{
 		if (!Actor) continue;
 
-		// Check ActorLabel first
-		if (Actor->GetActorLabel().Equals(NameToFind, ESearchCase::IgnoreCase))
-			return Actor;
-
-		// Fallback: internal name
 		if (Actor->GetName().Contains(NameToFind))
 			return Actor;
 	}
