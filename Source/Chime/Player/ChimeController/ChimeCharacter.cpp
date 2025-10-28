@@ -63,6 +63,10 @@ const float kPokeTraceDistance = 130.0f;
 
 AChimeCharacter::AChimeCharacter()
 {
+	// Setup the character mesh parent 
+	CharacterMeshParent = CreateDefaultSubobject<USceneComponent>(TEXT("CharacterMeshParent"));
+	CharacterMeshParent->SetupAttachment(RootComponent);
+
 	// Create a camera boom (pulls in towards the player if there is a collision)
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(RootComponent);
@@ -361,6 +365,24 @@ void AChimeCharacter::BeginPlay()
 		// Handle velocity clamping
 		HandleVelocity();
 
+		if (UnstickLerpAlpha < 1.0f)
+		{
+			UnstickLerpAlpha += DeltaTime / kWallJumpDelay;
+			UnstickLerpAlpha = FMath::Clamp(UnstickLerpAlpha, 0.0f, 1.0f);
+
+			FQuat NewQuat = FQuat::Slerp(StickyActorQuat, UprightActorQuat, UnstickLerpAlpha);
+			CharacterMeshParent->SetRelativeRotation(NewQuat);
+
+			if (UnstickLerpAlpha >= 1) 
+			{
+				CharacterMeshParent->SetRelativeRotation(FQuat::Identity);
+
+				UnstickLerpAlpha = 1;
+				StickyActorQuat = FQuat::Identity;
+				UprightActorQuat = FQuat::Identity;
+			}
+		}
+
 		if (CurrentContextAction == EContextAction::ECS_Dragging) 
 		{
 			if (BeakPhysicsHandle && BeakPhysicsHandle->GrabbedComponent)
@@ -619,11 +641,23 @@ void AChimeCharacter::BeginPlay()
 
 	void AChimeCharacter::UnstickFromSurface()
 	{
-		GetCharacterMovement()->SetMovementMode(MOVE_Walking);
-		GetCharacterMovement()->GravityScale = kDefaultGravityScale;
-		this->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+		FQuat MeshWorldQuat = CharacterMeshParent->GetComponentQuat();
 
+		FRotator StuckActorRot = GetActorRotation();
+		FRotator UprightActorRot = FRotator(0, StuckActorRot.Yaw, 0);
+
+		DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+		GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+		SetActorRotation(UprightActorRot);
 		CurrentContextAction = EContextAction::ECS_None;
+		GetCharacterMovement()->GravityScale = kDefaultGravityScale;
+
+		StickyActorQuat = MeshWorldQuat * GetActorQuat().Inverse();
+		UprightActorQuat = FQuat::Identity;
+
+		CharacterMeshParent->SetRelativeRotation(StickyActorQuat);
+
+		UnstickLerpAlpha = 0.0f;
 	}
 
 	void AChimeCharacter::StartDragObject(FHitResult hitResult)

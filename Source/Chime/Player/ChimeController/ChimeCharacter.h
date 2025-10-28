@@ -17,6 +17,10 @@ class AChimeCharacter : public ACharacter
 {
 	GENERATED_BODY()
 
+	/** Character mesh holder*/
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
+	USceneComponent* CharacterMeshParent;
+
 	/** Camera boom positioning the camera behind the character */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
 	USpringArmComponent* CameraBoom;
@@ -51,10 +55,8 @@ private:
 	// Wall jump
 	bool bIsOnWall = false;
 	bool bIsWallJumping = false;// Used to kill double jump after wall jump
-	FTimerHandle WallJumpTimer;
-
-	// Double jump
 	bool bHasDoubleJumped = false;
+	FTimerHandle WallJumpTimer;
 
 	// -- Crouching --
 	bool bIsCrouching = false;
@@ -70,6 +72,14 @@ private:
 		ECS_ControllingGear UMETA(DisplayName = "ControllingGear")
 	};
 	EContextAction CurrentContextAction;
+
+	// Unstick Lerp
+	float UnstickLerpAlpha;
+	FQuat UprightActorQuat;
+	FQuat StickyActorQuat;// Used in lerping from sticking into a wall.
+
+	FQuat UprightMeshQuat;
+	FQuat UnstuckMeshQuat;// Used in lerping after un-sticking from a wall.
 
 public: 
 	// -- Gliding -- 
