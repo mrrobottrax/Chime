@@ -58,6 +58,7 @@ const float kGroundPoundInputBuffer = 0.15f;
 
 // -- Context Action --
 const float kPokeTraceDistance = 130.0f;
+const float k_meshCorrectionRotSpeed = 425.f;
 
 #pragma endregion
 
@@ -81,7 +82,7 @@ AChimeCharacter::AChimeCharacter()
 	// Physics handle
 	BeakPhysicsHandle = CreateDefaultSubobject<UPhysicsHandleComponent>(TEXT("BeakPhysicsHandle"));
 	BeakComponent = CreateDefaultSubobject<USceneComponent>(TEXT("BeakComponent"));
-	BeakComponent->SetupAttachment(RootComponent);
+	BeakComponent->SetupAttachment(CharacterMeshParent);
 
 	// Bind overlaps
 	GetCapsuleComponent()->OnComponentBeginOverlap.AddDynamic(this, &AChimeCharacter::OnCharacterOverlap);
@@ -365,23 +366,8 @@ void AChimeCharacter::BeginPlay()
 		// Handle velocity clamping
 		HandleVelocity();
 
-		if (UnstickLerpAlpha < 1.0f)
-		{
-			UnstickLerpAlpha += DeltaTime / kWallJumpDelay;
-			UnstickLerpAlpha = FMath::Clamp(UnstickLerpAlpha, 0.0f, 1.0f);
-
-			FQuat NewQuat = FQuat::Slerp(StickyActorQuat, UprightActorQuat, UnstickLerpAlpha);
-			CharacterMeshParent->SetRelativeRotation(NewQuat);
-
-			if (UnstickLerpAlpha >= 1) 
-			{
-				CharacterMeshParent->SetRelativeRotation(FQuat::Identity);
-
-				UnstickLerpAlpha = 1;
-				StickyActorQuat = FQuat::Identity;
-				UprightActorQuat = FQuat::Identity;
-			}
-		}
+		// Correct mesh rotation after wall stick
+		LerpMeshUpright(DeltaTime);
 
 		if (CurrentContextAction == EContextAction::ECS_Dragging) 
 		{
@@ -641,23 +627,20 @@ void AChimeCharacter::BeginPlay()
 
 	void AChimeCharacter::UnstickFromSurface()
 	{
-		FQuat MeshWorldQuat = CharacterMeshParent->GetComponentQuat();
+		FRotator MeshWorldQuat = CharacterMeshParent->GetComponentRotation();
+		UE_LOG(LogTemp, Warning, TEXT("Mesh Rot: %s"), *MeshWorldQuat.ToString());
 
-		FRotator StuckActorRot = GetActorRotation();
-		FRotator UprightActorRot = FRotator(0, StuckActorRot.Yaw, 0);
+		FRotator UprightActorRot = FRotator(0, MeshWorldQuat.Yaw, 0);
 
 		DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
 		GetCharacterMovement()->SetMovementMode(MOVE_Walking);
-		SetActorRotation(UprightActorRot);
+		SetActorRotation(UprightActorRot);// Force yaw to match to facing direction while sticking
+
+		// Return input functionality
 		CurrentContextAction = EContextAction::ECS_None;
 		GetCharacterMovement()->GravityScale = kDefaultGravityScale;
 
-		StickyActorQuat = MeshWorldQuat * GetActorQuat().Inverse();
-		UprightActorQuat = FQuat::Identity;
-
-		CharacterMeshParent->SetRelativeRotation(StickyActorQuat);
-
-		UnstickLerpAlpha = 0.0f;
+		CharacterMeshParent->SetWorldRotation(MeshWorldQuat);
 	}
 
 	void AChimeCharacter::StartDragObject(FHitResult hitResult)
@@ -717,6 +700,45 @@ void AChimeCharacter::BeginPlay()
 		// Restore movement 
 		bIsInputRestricted = false;
 	}
+
+	void AChimeCharacter::LerpMeshUpright(float DeltaTime)
+	{
+		if (CurrentContextAction == EContextAction::ECS_Poking)
+			return;
+
+		const FVector WorldUp = FVector::UpVector;
+
+		// Find mesh up
+		FQuat CurrentQuat = CharacterMeshParent->GetComponentQuat();
+		FVector MeshUp = CurrentQuat.GetUpVector();
+
+		// Compute the rotation needed to make MeshUp point toward world up
+		FVector AxisOfRot = FVector::CrossProduct(MeshUp, WorldUp);
+		float SinAngle = AxisOfRot.Size();
+
+		// Snap upright if the AxisOfRot's magnitude is small 
+		// (The world and mesh up are close to alligned)
+		if (SinAngle < 0.01f) 
+		{
+			CharacterMeshParent->SetWorldRotation(GetActorRotation());
+			return;
+		}
+
+		// Calculate speed in degrees per sec
+		float AngleRad = FMath::Asin(SinAngle);
+		float MaxStepRad = FMath::DegreesToRadians(k_meshCorrectionRotSpeed * DeltaTime);
+		float StepRad = FMath::Min(AngleRad, MaxStepRad);
+
+		// Create rotation quaternion
+		AxisOfRot.Normalize();
+		FQuat DeltaQuat(AxisOfRot, StepRad);
+		FQuat NewQuat = DeltaQuat * CurrentQuat;
+		NewQuat.Normalize();
+
+		// Set meshes world rotation (Yer dun bud)
+		CharacterMeshParent->SetWorldRotation(NewQuat);
+	}
+
 
 	bool AChimeCharacter::CheckForWall(bool isJumpIgnored, FHitResult* outHit)
 	{

@@ -233,6 +233,9 @@ protected:
 
 	void OnResumeMovement();
 
+	/** Rotates the characters mesh if it has become unaligned with its default (upright facing actor forward) rotation.*/
+	void LerpMeshUpright(float DeltaTime);
+
 protected:
 
 	virtual void OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PreviousCustomMode = 0) override;
