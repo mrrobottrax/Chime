@@ -230,7 +230,10 @@ void AChimeCharacter::BeginPlay()
 
 	void AChimeCharacter::DoMove(float Right, float Forward)
 	{
-		if (bIsInputRestricted || bIsWallJumping || bIsGroundPounding)
+		if (bIsInputRestricted || 
+			bIsWallJumping || 
+			bIsGroundPounding ||
+			CurrentContextAction == EContextAction::ECS_Poking)
 			return;
 
 		if (GetController() != nullptr)
@@ -378,6 +381,18 @@ void AChimeCharacter::BeginPlay()
 				FRotator BeakRot = BeakComponent->GetComponentRotation();
 				BeakPhysicsHandle->SetTargetLocationAndRotation(BeakLoc, BeakRot);
 			}
+		}
+		else if (CurrentContextAction == EContextAction::ECS_Poking && IsValid(StuckComponent))
+		{
+			// Convert to worldspace
+			FVector WorldStickLocation = StuckComponent->GetComponentTransform().TransformPosition(LocalStickLocation);
+			FVector WorldNormal = StuckComponent->GetComponentTransform().TransformVectorNoScale(LocalStickNormal);
+
+			FVector NewLocation = WorldStickLocation + (WorldNormal * GetCapsuleComponent()->GetUnscaledCapsuleRadius());
+
+			SetActorLocation(FMath::VInterpTo(GetActorLocation(), NewLocation, DeltaTime, 100.0f));
+			SetActorRotation(FVector(-100, -100, 100).Rotation());
+			CharacterMeshParent->SetWorldRotation(WorldNormal.Rotation());
 		}
 	}
 
@@ -603,40 +618,43 @@ void AChimeCharacter::BeginPlay()
 
 	void AChimeCharacter::StickToSurface(FHitResult hitResult)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Poke into surface"));
+		StuckComponent = hitResult.GetComponent();
+		if (!IsValid(StuckComponent)) return;
+
 		CurrentContextAction = EContextAction::ECS_Poking;
+		UE_LOG(LogTemp, Warning, TEXT("Poke into surface"));
 
-		FVector WallNormal = hitResult.ImpactNormal;
+		// Snap to hit location and face surface
+		SetActorLocation(hitResult.Location + (hitResult.ImpactNormal * GetCapsuleComponent()->GetUnscaledCapsuleRadius()));
+		SetActorRotation((-hitResult.ImpactNormal).Rotation());
 
-		// Face wall
-		FRotator TargetRotation = (-WallNormal).Rotation();
-		SetActorRotation(TargetRotation);
+		// Store local position/normal relative to surface
+		LocalStickLocation = StuckComponent->GetComponentTransform().InverseTransformPosition(hitResult.Location);
+		LocalStickNormal = StuckComponent->GetComponentTransform().InverseTransformVectorNoScale(hitResult.ImpactNormal);
 
-		// Snap to wall surface
-		FVector hitLocation = hitResult.Location;
-		FVector dirToPlayer = hitLocation - GetActorLocation();
-		FVector newLocation = hitLocation + (WallNormal * GetCapsuleComponent()->GetUnscaledCapsuleRadius());
-		SetActorLocation(newLocation);
-
-		// Follow surface transfrom
-		GetCharacterMovement()->DisableMovement();
-		GetCharacterMovement()->GravityScale = 0;
+		// Disable movement
 		GetCharacterMovement()->StopActiveMovement();
-		this->AttachToActor(hitResult.GetActor(), FAttachmentTransformRules::KeepWorldTransform);
+		GetCharacterMovement()->SetMovementMode(MOVE_Flying);
+		GetCharacterMovement()->GravityScale = 0;
 	}
 
 	void AChimeCharacter::UnstickFromSurface()
 	{
-		FRotator MeshWorldQuat = CharacterMeshParent->GetComponentRotation();
-		UE_LOG(LogTemp, Warning, TEXT("Mesh Rot: %s"), *MeshWorldQuat.ToString());
+		StuckComponent = nullptr;
+		LocalStickLocation = FVector::ZeroVector;
+		LocalStickNormal = FVector::ZeroVector;
 
-		FRotator UprightActorRot = FRotator(0, MeshWorldQuat.Yaw, 0);
+		FRotator MeshWorldQuat = CharacterMeshParent->GetComponentRotation();
 
 		DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
 		GetCharacterMovement()->SetMovementMode(MOVE_Walking);
-		SetActorRotation(UprightActorRot);// Force yaw to match to facing direction while sticking
+
+		// Rotate upright while maintaining yaw
+		FRotator UprightActorRot = FRotator(0, MeshWorldQuat.Yaw, 0);
+		SetActorRotation(UprightActorRot);
 
 		// Return input functionality
+		LocalStickLocation = FVector::Zero();
 		CurrentContextAction = EContextAction::ECS_None;
 		GetCharacterMovement()->GravityScale = kDefaultGravityScale;
 
@@ -818,6 +836,10 @@ void AChimeCharacter::BeginPlay()
 	{
 		if (!IsValid(OtherActor))
 			return;
+
+		// To do
+		if (OverlappedComp->IsSimulatingPhysics() == false)
+			UE_LOG(LogTemp, Warning, TEXT("Trigger name is: %s"), *OtherActor->GetName());
 
 		AActor* ParentActor = OtherActor->GetAttachParentActor();
 		if (IsValid(ParentActor) && ParentActor->IsA<AInteractableBase>())

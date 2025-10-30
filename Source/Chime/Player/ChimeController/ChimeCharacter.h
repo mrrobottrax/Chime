@@ -73,13 +73,11 @@ private:
 	};
 	EContextAction CurrentContextAction;
 
-	// Unstick Lerp
+	// Surface sticking
 	float UnstickLerpAlpha;
-	FQuat UprightActorQuat;
-	FQuat StickyActorQuat;// Used in lerping from sticking into a wall.
-
-	FQuat UprightMeshQuat;
-	FQuat UnstuckMeshQuat;// Used in lerping after un-sticking from a wall.
+	UPrimitiveComponent* StuckComponent = nullptr;
+	FVector LocalStickLocation;
+	FVector LocalStickNormal;
 
 public: 
 	// -- Gliding -- 
