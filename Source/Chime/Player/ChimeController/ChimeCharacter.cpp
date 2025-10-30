@@ -85,6 +85,7 @@ AChimeCharacter::AChimeCharacter()
 	BeakComponent->SetupAttachment(CharacterMeshParent);
 
 	// Bind overlaps
+	GetCapsuleComponent()->BodyInstance.SetCollisionProfileName("Pawn");
 	GetCapsuleComponent()->OnComponentBeginOverlap.AddDynamic(this, &AChimeCharacter::OnCharacterOverlap);
 	GetCapsuleComponent()->OnComponentEndOverlap.AddDynamic(this, &AChimeCharacter::OnCharacterEndOverlap);
 
@@ -138,6 +139,8 @@ void AChimeCharacter::BeginPlay()
 			}
 		}
 	}
+
+	CurrentContextAction = EContextAction::ECS_None;
 }
 
 #pragma region Character Functions
@@ -384,15 +387,41 @@ void AChimeCharacter::BeginPlay()
 		}
 		else if (CurrentContextAction == EContextAction::ECS_Poking && IsValid(StuckComponent))
 		{
-			// Convert to worldspace
-			FVector WorldStickLocation = StuckComponent->GetComponentTransform().TransformPosition(LocalStickLocation);
-			FVector WorldNormal = StuckComponent->GetComponentTransform().TransformVectorNoScale(LocalStickNormal);
+			FHitResult hitResult;
+			FVector start = GetActorLocation();
 
-			FVector NewLocation = WorldStickLocation + (WorldNormal * GetCapsuleComponent()->GetUnscaledCapsuleRadius());
+			GetWorld()->SweepSingleByChannel(
+				hitResult,
+				start,
+				start,
+				FQuat::Identity,
+				ECC_Visibility,
+				FCollisionShape::MakeCapsule(
+					GetCapsuleComponent()->GetUnscaledCapsuleRadius(),
+					GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight()
+				)
+			);
 
-			SetActorLocation(FMath::VInterpTo(GetActorLocation(), NewLocation, DeltaTime, 100.0f));
-			SetActorRotation(FVector(-100, -100, 100).Rotation());
-			CharacterMeshParent->SetWorldRotation(WorldNormal.Rotation());
+			if (hitResult.bStartPenetrating)
+			{
+				UPrimitiveComponent* HitComp = hitResult.GetComponent();
+
+				const bool bIsSelf = (hitResult.GetActor() == this);
+				const bool bIsStuckComponent = (HitComp && HitComp == StuckComponent);
+
+				// Push the player away from the collision
+				if (!bIsSelf && !bIsStuckComponent)
+				{
+					FVector Correction = hitResult.Normal * (hitResult.PenetrationDepth + 0.1f);
+					SetActorLocation(GetActorLocation() + Correction, false);
+				}
+			}
+
+			// Knock out of poke if the player has drifted too far away from entry point
+			float dist = (GetActorLocation() - StuckComponent->GetComponentTransform().TransformPosition(LocalStickLocation)).Length();
+			UE_LOG(LogTemp, Warning, TEXT("Dist: %f"), dist);
+			if (dist > 70) 
+				UnstickFromSurface();
 		}
 	}
 
@@ -628,21 +657,20 @@ void AChimeCharacter::BeginPlay()
 		SetActorLocation(hitResult.Location + (hitResult.ImpactNormal * GetCapsuleComponent()->GetUnscaledCapsuleRadius()));
 		SetActorRotation((-hitResult.ImpactNormal).Rotation());
 
-		// Store local position/normal relative to surface
+		// Store local position relative to surface
 		LocalStickLocation = StuckComponent->GetComponentTransform().InverseTransformPosition(hitResult.Location);
-		LocalStickNormal = StuckComponent->GetComponentTransform().InverseTransformVectorNoScale(hitResult.ImpactNormal);
 
 		// Disable movement
-		GetCharacterMovement()->StopActiveMovement();
-		GetCharacterMovement()->SetMovementMode(MOVE_Flying);
+		GetCharacterMovement()->DisableMovement();
 		GetCharacterMovement()->GravityScale = 0;
+		GetCharacterMovement()->StopActiveMovement();
+		this->AttachToActor(hitResult.GetActor(), FAttachmentTransformRules::KeepWorldTransform);
 	}
 
 	void AChimeCharacter::UnstickFromSurface()
 	{
 		StuckComponent = nullptr;
 		LocalStickLocation = FVector::ZeroVector;
-		LocalStickNormal = FVector::ZeroVector;
 
 		FRotator MeshWorldQuat = CharacterMeshParent->GetComponentRotation();
 
@@ -834,12 +862,8 @@ void AChimeCharacter::BeginPlay()
 
 	void AChimeCharacter::OnCharacterOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 	{
-		if (!IsValid(OtherActor))
+		if (!IsValid(OtherActor) || OtherActor == this)
 			return;
-
-		// To do
-		if (OverlappedComp->IsSimulatingPhysics() == false)
-			UE_LOG(LogTemp, Warning, TEXT("Trigger name is: %s"), *OtherActor->GetName());
 
 		AActor* ParentActor = OtherActor->GetAttachParentActor();
 		if (IsValid(ParentActor) && ParentActor->IsA<AInteractableBase>())
@@ -847,7 +871,6 @@ void AChimeCharacter::BeginPlay()
 			UE_LOG(LogTemp, Warning, TEXT("Entered interactable trigger"));
 			CurrentInteractable = Cast<AInteractableBase>(ParentActor);
 		}
-
 	}
 
 	void AChimeCharacter::OnCharacterEndOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)

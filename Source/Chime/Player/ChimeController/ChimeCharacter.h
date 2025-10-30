@@ -77,7 +77,6 @@ private:
 	float UnstickLerpAlpha;
 	UPrimitiveComponent* StuckComponent = nullptr;
 	FVector LocalStickLocation;
-	FVector LocalStickNormal;
 
 public: 
 	// -- Gliding -- 
