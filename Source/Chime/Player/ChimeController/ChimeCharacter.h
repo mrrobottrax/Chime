@@ -17,6 +17,10 @@ class AChimeCharacter : public ACharacter
 {
 	GENERATED_BODY()
 
+	/** Character mesh holder*/
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
+	USceneComponent* CharacterMeshParent;
+
 	/** Camera boom positioning the camera behind the character */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
 	USpringArmComponent* CameraBoom;
@@ -51,10 +55,8 @@ private:
 	// Wall jump
 	bool bIsOnWall = false;
 	bool bIsWallJumping = false;// Used to kill double jump after wall jump
-	FTimerHandle WallJumpTimer;
-
-	// Double jump
 	bool bHasDoubleJumped = false;
+	FTimerHandle WallJumpTimer;
 
 	// -- Crouching --
 	bool bIsCrouching = false;
@@ -70,6 +72,11 @@ private:
 		ECS_ControllingGear UMETA(DisplayName = "ControllingGear")
 	};
 	EContextAction CurrentContextAction;
+
+	// Surface sticking
+	float UnstickLerpAlpha;
+	UPrimitiveComponent* StuckComponent = nullptr;
+	FVector LocalStickLocation;
 
 public: 
 	// -- Gliding -- 
@@ -222,6 +229,9 @@ protected:
 	void PauseMovement(float duration, FVector resumeVelocity);
 
 	void OnResumeMovement();
+
+	/** Rotates the characters mesh if it has become unaligned with its default (upright facing actor forward) rotation.*/
+	void LerpMeshUpright(float DeltaTime);
 
 protected:
 

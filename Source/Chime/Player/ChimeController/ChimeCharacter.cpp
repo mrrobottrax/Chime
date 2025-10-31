@@ -58,11 +58,16 @@ const float kGroundPoundInputBuffer = 0.15f;
 
 // -- Context Action --
 const float kPokeTraceDistance = 130.0f;
+const float k_meshCorrectionRotSpeed = 425.f;
 
 #pragma endregion
 
 AChimeCharacter::AChimeCharacter()
 {
+	// Setup the character mesh parent 
+	CharacterMeshParent = CreateDefaultSubobject<USceneComponent>(TEXT("CharacterMeshParent"));
+	CharacterMeshParent->SetupAttachment(RootComponent);
+
 	// Create a camera boom (pulls in towards the player if there is a collision)
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(RootComponent);
@@ -77,9 +82,10 @@ AChimeCharacter::AChimeCharacter()
 	// Physics handle
 	BeakPhysicsHandle = CreateDefaultSubobject<UPhysicsHandleComponent>(TEXT("BeakPhysicsHandle"));
 	BeakComponent = CreateDefaultSubobject<USceneComponent>(TEXT("BeakComponent"));
-	BeakComponent->SetupAttachment(RootComponent);
+	BeakComponent->SetupAttachment(CharacterMeshParent);
 
 	// Bind overlaps
+	GetCapsuleComponent()->BodyInstance.SetCollisionProfileName("Pawn");
 	GetCapsuleComponent()->OnComponentBeginOverlap.AddDynamic(this, &AChimeCharacter::OnCharacterOverlap);
 	GetCapsuleComponent()->OnComponentEndOverlap.AddDynamic(this, &AChimeCharacter::OnCharacterEndOverlap);
 
@@ -133,6 +139,8 @@ void AChimeCharacter::BeginPlay()
 			}
 		}
 	}
+
+	CurrentContextAction = EContextAction::ECS_None;
 }
 
 #pragma region Character Functions
@@ -225,7 +233,10 @@ void AChimeCharacter::BeginPlay()
 
 	void AChimeCharacter::DoMove(float Right, float Forward)
 	{
-		if (bIsInputRestricted || bIsWallJumping || bIsGroundPounding)
+		if (bIsInputRestricted || 
+			bIsWallJumping || 
+			bIsGroundPounding ||
+			CurrentContextAction == EContextAction::ECS_Poking)
 			return;
 
 		if (GetController() != nullptr)
@@ -361,6 +372,9 @@ void AChimeCharacter::BeginPlay()
 		// Handle velocity clamping
 		HandleVelocity();
 
+		// Correct mesh rotation after wall stick
+		LerpMeshUpright(DeltaTime);
+
 		if (CurrentContextAction == EContextAction::ECS_Dragging) 
 		{
 			if (BeakPhysicsHandle && BeakPhysicsHandle->GrabbedComponent)
@@ -370,6 +384,43 @@ void AChimeCharacter::BeginPlay()
 				FRotator BeakRot = BeakComponent->GetComponentRotation();
 				BeakPhysicsHandle->SetTargetLocationAndRotation(BeakLoc, BeakRot);
 			}
+		}
+		else if (CurrentContextAction == EContextAction::ECS_Poking && IsValid(StuckComponent))
+		{
+			FHitResult hitResult;
+			FVector traceStart = GetActorLocation();
+
+			GetWorld()->SweepSingleByChannel(
+				hitResult,
+				traceStart,
+				traceStart,
+				FQuat::Identity,
+				ECC_Visibility,
+				FCollisionShape::MakeCapsule(
+					GetCapsuleComponent()->GetUnscaledCapsuleRadius(),
+					GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight()
+				)
+			);
+
+			if (hitResult.bStartPenetrating)
+			{
+				UPrimitiveComponent* HitComp = hitResult.GetComponent();
+
+				const bool bIsSelf = (hitResult.GetActor() == this);
+				const bool bIsStuckComponent = (HitComp && HitComp == StuckComponent);
+
+				// Push the player away from the collision
+				if (!bIsSelf && !bIsStuckComponent)
+				{
+					FVector Correction = hitResult.Normal * (hitResult.PenetrationDepth + 0.1f);
+					SetActorLocation(GetActorLocation() + Correction, false);
+				}
+			}
+
+			// Knock out of poke if the player has drifted too far away from entry point
+			float dist = (GetActorLocation() - StuckComponent->GetComponentTransform().TransformPosition(LocalStickLocation)).Length();
+			if (dist > 70) 
+				UnstickFromSurface();
 		}
 	}
 
@@ -383,8 +434,11 @@ void AChimeCharacter::BeginPlay()
 
 		if (!bIsGliding) 
 		{
-			if (GetCharacterMovement()->IsFalling())
+			if (GetCharacterMovement()->IsFalling() || CurrentContextAction == EContextAction::ECS_Poking)
 			{
+				if (CurrentContextAction == EContextAction::ECS_Poking)
+					UnstickFromSurface();
+
 				FHitResult Hit;
 				if (CheckForWall(true, &Hit))
 				{
@@ -398,10 +452,6 @@ void AChimeCharacter::BeginPlay()
 					const FVector WallJumpImpulse =
 						(Hit.ImpactNormal* kWallJumpAdjacentImpulse) +
 							(FVector::UpVector * kWallJumpVerticalImpulse);
-
-					// Break from wall poke
-					if (CurrentContextAction == EContextAction::ECS_Poking)
-						UnstickFromSurface();
 
 						LaunchCharacter(WallJumpImpulse, true, true);
 
@@ -595,22 +645,20 @@ void AChimeCharacter::BeginPlay()
 
 	void AChimeCharacter::StickToSurface(FHitResult hitResult)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Poke into surface"));
+		StuckComponent = hitResult.GetComponent();
+		if (!IsValid(StuckComponent)) return;
+
 		CurrentContextAction = EContextAction::ECS_Poking;
+		UE_LOG(LogTemp, Warning, TEXT("Poke into surface"));
 
-		FVector WallNormal = hitResult.ImpactNormal;
+		// Snap to hit location and face surface
+		SetActorLocation(hitResult.Location + (hitResult.ImpactNormal * GetCapsuleComponent()->GetUnscaledCapsuleRadius()));
+		SetActorRotation((-hitResult.ImpactNormal).Rotation());
 
-		// Face wall
-		FRotator TargetRotation = (-WallNormal).Rotation();
-		SetActorRotation(TargetRotation);
+		// Store local position relative to surface
+		LocalStickLocation = StuckComponent->GetComponentTransform().InverseTransformPosition(hitResult.Location);
 
-		// Snap to wall surface
-		FVector hitLocation = hitResult.Location;
-		FVector dirToPlayer = hitLocation - GetActorLocation();
-		FVector newLocation = hitLocation + (WallNormal * GetCapsuleComponent()->GetUnscaledCapsuleRadius());
-		SetActorLocation(newLocation);
-
-		// Follow surface transfrom
+		// Disable movement
 		GetCharacterMovement()->DisableMovement();
 		GetCharacterMovement()->GravityScale = 0;
 		GetCharacterMovement()->StopActiveMovement();
@@ -619,11 +667,28 @@ void AChimeCharacter::BeginPlay()
 
 	void AChimeCharacter::UnstickFromSurface()
 	{
-		GetCharacterMovement()->SetMovementMode(MOVE_Walking);
-		GetCharacterMovement()->GravityScale = kDefaultGravityScale;
-		this->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+		// Push back and detach from surface
+		const FVector pushbackOffset(GetActorLocation() -(GetActorForwardVector() * 2));
+		SetActorLocation(pushbackOffset);
+		DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+		GetCharacterMovement()->SetMovementMode(MOVE_Falling);
 
+		// Rotate upright while maintaining yaw
+		FRotator MeshWorldQuat = CharacterMeshParent->GetComponentRotation();
+		FRotator UprightActorRot = FRotator(0, MeshWorldQuat.Yaw, 0);
+		SetActorRotation(UprightActorRot);
+
+		// Return input functionality
+		LocalStickLocation = FVector::Zero();
 		CurrentContextAction = EContextAction::ECS_None;
+		GetCharacterMovement()->GravityScale = kDefaultGravityScale;
+
+		// Set mesh rotation to enable slerp
+		CharacterMeshParent->SetWorldRotation(MeshWorldQuat);
+
+		// Clear surface data
+		StuckComponent = nullptr;
+		LocalStickLocation = FVector::ZeroVector;
 	}
 
 	void AChimeCharacter::StartDragObject(FHitResult hitResult)
@@ -684,9 +749,50 @@ void AChimeCharacter::BeginPlay()
 		bIsInputRestricted = false;
 	}
 
-	bool AChimeCharacter::CheckForWall(bool isJumpIgnored, FHitResult* outHit)
+	void AChimeCharacter::LerpMeshUpright(float DeltaTime)
 	{
-		if (bIsGroundPounding || (!isJumpIgnored && bIsJumpPressed) || !GetCharacterMovement()->IsFalling())
+		if (CurrentContextAction == EContextAction::ECS_Poking)
+			return;
+
+		const FVector WorldUp = FVector::UpVector;
+
+		// Find mesh up
+		FQuat CurrentQuat = CharacterMeshParent->GetComponentQuat();
+		FVector MeshUp = CurrentQuat.GetUpVector();
+
+		// Compute the rotation needed to make MeshUp point toward world up
+		FVector AxisOfRot = FVector::CrossProduct(MeshUp, WorldUp);
+		float SinAngle = AxisOfRot.Size();
+
+		// Snap upright if the AxisOfRot's magnitude is small 
+		// (The world and mesh up are close to alligned)
+		if (SinAngle < 0.01f) 
+		{
+			CharacterMeshParent->SetWorldRotation(GetActorRotation());
+			return;
+		}
+
+		// Calculate speed in degrees per sec
+		float AngleRad = FMath::Asin(SinAngle);
+		float MaxStepRad = FMath::DegreesToRadians(k_meshCorrectionRotSpeed * DeltaTime);
+		float StepRad = FMath::Min(AngleRad, MaxStepRad);
+
+		// Create rotation quaternion
+		AxisOfRot.Normalize();
+		FQuat DeltaQuat(AxisOfRot, StepRad);
+		FQuat NewQuat = DeltaQuat * CurrentQuat;
+		NewQuat.Normalize();
+
+		// Set meshes world rotation (Yer dun bud)
+		CharacterMeshParent->SetWorldRotation(NewQuat);
+	}
+
+
+	bool AChimeCharacter::CheckForWall(bool bIsJumpIgnored, FHitResult* outHit)
+	{
+		if (bIsGroundPounding || 
+			(!bIsJumpIgnored && bIsJumpPressed) ||
+			!GetCharacterMovement()->IsFalling())
 			return false;
 
 		// Cast capsule forward
@@ -760,7 +866,7 @@ void AChimeCharacter::BeginPlay()
 
 	void AChimeCharacter::OnCharacterOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 	{
-		if (!IsValid(OtherActor))
+		if (!IsValid(OtherActor) || OtherActor == this)
 			return;
 
 		AActor* ParentActor = OtherActor->GetAttachParentActor();
@@ -769,7 +875,6 @@ void AChimeCharacter::BeginPlay()
 			UE_LOG(LogTemp, Warning, TEXT("Entered interactable trigger"));
 			CurrentInteractable = Cast<AInteractableBase>(ParentActor);
 		}
-
 	}
 
 	void AChimeCharacter::OnCharacterEndOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
