@@ -388,12 +388,12 @@ void AChimeCharacter::BeginPlay()
 		else if (CurrentContextAction == EContextAction::ECS_Poking && IsValid(StuckComponent))
 		{
 			FHitResult hitResult;
-			FVector start = GetActorLocation();
+			FVector traceStart = GetActorLocation();
 
 			GetWorld()->SweepSingleByChannel(
 				hitResult,
-				start,
-				start,
+				traceStart,
+				traceStart,
 				FQuat::Identity,
 				ECC_Visibility,
 				FCollisionShape::MakeCapsule(
@@ -419,7 +419,6 @@ void AChimeCharacter::BeginPlay()
 
 			// Knock out of poke if the player has drifted too far away from entry point
 			float dist = (GetActorLocation() - StuckComponent->GetComponentTransform().TransformPosition(LocalStickLocation)).Length();
-			UE_LOG(LogTemp, Warning, TEXT("Dist: %f"), dist);
 			if (dist > 70) 
 				UnstickFromSurface();
 		}
@@ -435,8 +434,11 @@ void AChimeCharacter::BeginPlay()
 
 		if (!bIsGliding) 
 		{
-			if (GetCharacterMovement()->IsFalling())
+			if (GetCharacterMovement()->IsFalling() || CurrentContextAction == EContextAction::ECS_Poking)
 			{
+				if (CurrentContextAction == EContextAction::ECS_Poking)
+					UnstickFromSurface();
+
 				FHitResult Hit;
 				if (CheckForWall(true, &Hit))
 				{
@@ -450,10 +452,6 @@ void AChimeCharacter::BeginPlay()
 					const FVector WallJumpImpulse =
 						(Hit.ImpactNormal* kWallJumpAdjacentImpulse) +
 							(FVector::UpVector * kWallJumpVerticalImpulse);
-
-					// Break from wall poke
-					if (CurrentContextAction == EContextAction::ECS_Poking)
-						UnstickFromSurface();
 
 						LaunchCharacter(WallJumpImpulse, true, true);
 
@@ -669,15 +667,14 @@ void AChimeCharacter::BeginPlay()
 
 	void AChimeCharacter::UnstickFromSurface()
 	{
-		StuckComponent = nullptr;
-		LocalStickLocation = FVector::ZeroVector;
-
-		FRotator MeshWorldQuat = CharacterMeshParent->GetComponentRotation();
-
+		// Push back and detach from surface
+		const FVector pushbackOffset(GetActorLocation() -(GetActorForwardVector() * 2));
+		SetActorLocation(pushbackOffset);
 		DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
-		GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+		GetCharacterMovement()->SetMovementMode(MOVE_Falling);
 
 		// Rotate upright while maintaining yaw
+		FRotator MeshWorldQuat = CharacterMeshParent->GetComponentRotation();
 		FRotator UprightActorRot = FRotator(0, MeshWorldQuat.Yaw, 0);
 		SetActorRotation(UprightActorRot);
 
@@ -686,7 +683,12 @@ void AChimeCharacter::BeginPlay()
 		CurrentContextAction = EContextAction::ECS_None;
 		GetCharacterMovement()->GravityScale = kDefaultGravityScale;
 
+		// Set mesh rotation to enable slerp
 		CharacterMeshParent->SetWorldRotation(MeshWorldQuat);
+
+		// Clear surface data
+		StuckComponent = nullptr;
+		LocalStickLocation = FVector::ZeroVector;
 	}
 
 	void AChimeCharacter::StartDragObject(FHitResult hitResult)
@@ -786,9 +788,11 @@ void AChimeCharacter::BeginPlay()
 	}
 
 
-	bool AChimeCharacter::CheckForWall(bool isJumpIgnored, FHitResult* outHit)
+	bool AChimeCharacter::CheckForWall(bool bIsJumpIgnored, FHitResult* outHit)
 	{
-		if (bIsGroundPounding || (!isJumpIgnored && bIsJumpPressed) || !GetCharacterMovement()->IsFalling())
+		if (bIsGroundPounding || 
+			(!bIsJumpIgnored && bIsJumpPressed) ||
+			!GetCharacterMovement()->IsFalling())
 			return false;
 
 		// Cast capsule forward
