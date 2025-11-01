@@ -626,14 +626,14 @@ void AChimeCharacter::BeginPlay()
 
 				switch (SurfaceType)
 				{
-				case EPhysicalSurface::SurfaceType1:
-					// Soft surface
-					StickToSurface(hitResult);
-					break;
+					case EPhysicalSurface::SurfaceType1:
+						// Soft surface
+						StickToSurface(hitResult);
+						break;
 
-				case EPhysicalSurface::SurfaceType2:
-					// Make sparks and shit
-					break;
+					case EPhysicalSurface::SurfaceType2:
+						// Make sparks and shit
+						break;
 				}
 			}
 		}
