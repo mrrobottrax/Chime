@@ -29,10 +29,6 @@ class AChimeCharacter : public ACharacter
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
 	UPlayerCameraComponent* PlayerCamera;
 
-	/** Beak physics handle for dragging objects*/
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
-	UPhysicsHandleComponent* BeakPhysicsHandle;
-
 	/** Physics handle location*/
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
 	USceneComponent* BeakComponent;
@@ -72,6 +68,9 @@ private:
 		ECS_ControllingGear UMETA(DisplayName = "ControllingGear")
 	};
 	EContextAction CurrentContextAction;
+
+	// Pickups
+	UPrimitiveComponent* currentPickup;
 
 	// Surface sticking
 	float UnstickLerpAlpha;
@@ -204,7 +203,7 @@ protected:
 
 	void UnstickFromSurface();
 
-	void StartDragObject(FHitResult hitResult);
+	void StartDragObject(UPrimitiveComponent* object);
 
 	void DropDraggedObject();
 

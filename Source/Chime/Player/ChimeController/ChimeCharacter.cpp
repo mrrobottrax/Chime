@@ -12,6 +12,7 @@
 #include "PhysicsEngine/PhysicsHandleComponent.h"
 #include "Managers/GameManager.h"
 #include "Chime/LevelTools/InteractableBase/InteractableBase.h"
+#include "Chime/LevelTools/InteractableBase/Pickup_Interactable.h"
 #include "Chime/Player/ChimeCamera/PlayerCameraComponent.h"
 #include "DrawDebugHelpers.h"
 
@@ -80,7 +81,6 @@ AChimeCharacter::AChimeCharacter()
 	PlayerCamera->bUsePawnControlRotation = false;
 
 	// Physics handle
-	BeakPhysicsHandle = CreateDefaultSubobject<UPhysicsHandleComponent>(TEXT("BeakPhysicsHandle"));
 	BeakComponent = CreateDefaultSubobject<USceneComponent>(TEXT("BeakComponent"));
 	BeakComponent->SetupAttachment(CharacterMeshParent);
 
@@ -375,17 +375,8 @@ void AChimeCharacter::BeginPlay()
 		// Correct mesh rotation after wall stick
 		LerpMeshUpright(DeltaTime);
 
-		if (CurrentContextAction == EContextAction::ECS_Dragging) 
-		{
-			if (BeakPhysicsHandle && BeakPhysicsHandle->GrabbedComponent)
-			{
-				// Snap the object to the beak
-				FVector BeakLoc = BeakComponent->GetComponentLocation();
-				FRotator BeakRot = BeakComponent->GetComponentRotation();
-				BeakPhysicsHandle->SetTargetLocationAndRotation(BeakLoc, BeakRot);
-			}
-		}
-		else if (CurrentContextAction == EContextAction::ECS_Poking && IsValid(StuckComponent))
+
+		if (CurrentContextAction == EContextAction::ECS_Poking && IsValid(StuckComponent))
 		{
 			FHitResult hitResult;
 			FVector traceStart = GetActorLocation();
@@ -617,28 +608,33 @@ void AChimeCharacter::BeginPlay()
 				return;
 		}
 
-		if (bIsActorHit && IsValid(hitResult.PhysMaterial.Get()))
+		if (bIsActorHit)
 		{
-			EPhysicalSurface SurfaceType = UPhysicalMaterial::DetermineSurfaceType(hitResult.PhysMaterial.Get());
-
-			switch (SurfaceType)
+			// Try pickup or interaction
+			if (hitResult.GetActor()->IsA(APickup_Interactable::StaticClass()))
 			{
+				UE_LOG(LogTemp, Warning, TEXT("Pickup"));
+
+				StartDragObject(hitResult.GetComponent());
+				return;
+			}
+
+			// Try poke
+			if (IsValid(hitResult.PhysMaterial.Get())) 
+			{
+				EPhysicalSurface SurfaceType = UPhysicalMaterial::DetermineSurfaceType(hitResult.PhysMaterial.Get());
+
+				switch (SurfaceType)
+				{
 				case EPhysicalSurface::SurfaceType1:
 					// Soft surface
-					if (hitResult.GetComponent()->IsSimulatingPhysics()) 
-					{
-						// Pickup soft rigidbodies
-						if (!bIsGroundPounding)
-							StartDragObject(hitResult);
-					}
-					else
-						// Stick into soft solid surfaces (even when ground pounding)
-						StickToSurface(hitResult);
+					StickToSurface(hitResult);
 					break;
 
 				case EPhysicalSurface::SurfaceType2:
 					// Make sparks and shit
 					break;
+				}
 			}
 		}
 	}
@@ -691,33 +687,27 @@ void AChimeCharacter::BeginPlay()
 		LocalStickLocation = FVector::ZeroVector;
 	}
 
-	void AChimeCharacter::StartDragObject(FHitResult hitResult)
+	void AChimeCharacter::StartDragObject(UPrimitiveComponent* object)
 	{
+		if (!IsValid(object))
+			return;
+
 		CurrentContextAction = EContextAction::ECS_Dragging;
 
-		UPrimitiveComponent* HitComp = hitResult.GetComponent();
-		if (HitComp && HitComp->IsSimulatingPhysics())
-		{
-			BeakPhysicsHandle->GrabComponentAtLocationWithRotation(
-				HitComp,
-				NAME_None,
-				hitResult.ImpactPoint,
-				HitComp->GetComponentRotation()
-			);
-
-			// Snap the object to the beak
-			FVector BeakLoc = BeakComponent->GetComponentLocation();
-			FRotator BeakRot = BeakComponent->GetComponentRotation();
-			BeakPhysicsHandle->SetTargetLocationAndRotation(BeakLoc, BeakRot);
-		}
+		currentPickup = object;
+		currentPickup->SetSimulatePhysics(false);
+		currentPickup->AttachToComponent(BeakComponent, FAttachmentTransformRules::SnapToTargetIncludingScale);
+		currentPickup->SetRelativeLocation(BeakComponent->GetRelativeLocation());
 	}
 
 	void AChimeCharacter::DropDraggedObject()
 	{
-		if (BeakPhysicsHandle && BeakPhysicsHandle->GrabbedComponent)
-		{
-			BeakPhysicsHandle->ReleaseComponent();
-		}
+		if (!IsValid(currentPickup))
+			return;
+
+		currentPickup->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
+		currentPickup->SetSimulatePhysics(true);
+		currentPickup = nullptr;
 
 		CurrentContextAction = EContextAction::ECS_None;
 	}
